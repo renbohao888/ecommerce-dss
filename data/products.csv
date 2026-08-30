@@ -1,0 +1,73 @@
+﻿product_id,name,category,price,cost,stock,launch_date
+P0001,Laptop & Accessory商品01,Laptop & Accessory,7030,3870,894,2026-02-11
+P0002,Laptop & Accessory商品02,Laptop & Accessory,6370,3000,1076,2026-05-28
+P0003,Laptop & Accessory商品03,Laptop & Accessory,6920,4370,1050,2024-04-25
+P0004,Laptop & Accessory商品04,Laptop & Accessory,4220,2260,405,2026-04-14
+P0005,Laptop & Accessory商品05,Laptop & Accessory,5900,3770,1113,2025-02-03
+P0006,Laptop & Accessory商品06,Laptop & Accessory,2280,1320,1781,2024-02-27
+P0007,Laptop & Accessory商品07,Laptop & Accessory,7500,4460,372,2025-11-13
+P0008,Laptop & Accessory商品08,Laptop & Accessory,3380,2280,919,2026-03-14
+P0009,Laptop & Accessory商品09,Laptop & Accessory,7070,3500,759,2025-02-24
+P0010,Laptop & Accessory商品10,Laptop & Accessory,680,330,1499,2025-09-06
+P0011,Laptop & Accessory商品11,Laptop & Accessory,6780,4560,851,2024-10-20
+P0012,Laptop & Accessory商品12,Laptop & Accessory,3520,1960,1601,2024-06-19
+P0013,Mobile Phone商品01,Mobile Phone,1910,1070,693,2024-07-23
+P0014,Mobile Phone商品02,Mobile Phone,5690,3130,363,2026-01-19
+P0015,Mobile Phone商品03,Mobile Phone,5900,3080,1547,2026-01-19
+P0016,Mobile Phone商品04,Mobile Phone,6630,3570,1801,2024-09-16
+P0017,Mobile Phone商品05,Mobile Phone,5780,2790,1673,2024-06-28
+P0018,Mobile Phone商品06,Mobile Phone,1050,660,1571,2025-08-21
+P0019,Mobile Phone商品07,Mobile Phone,5940,3740,1133,2025-02-17
+P0020,Mobile Phone商品08,Mobile Phone,4980,2400,528,2024-04-13
+P0021,Mobile Phone商品09,Mobile Phone,5680,3170,1717,2025-05-23
+P0022,Mobile Phone商品10,Mobile Phone,6350,3780,1152,2025-05-13
+P0023,Mobile Phone商品11,Mobile Phone,4910,2550,1225,2024-01-28
+P0024,Mobile Phone商品12,Mobile Phone,4060,2030,589,2025-01-02
+P0025,Household商品01,Household,770,390,1652,2024-02-22
+P0026,Household商品02,Household,290,150,896,2025-08-18
+P0027,Household商品03,Household,520,330,1992,2025-08-20
+P0028,Household商品04,Household,390,250,676,2024-05-30
+P0029,Household商品05,Household,70,30,1554,2025-10-12
+P0030,Household商品06,Household,440,210,1806,2025-03-26
+P0031,Household商品07,Household,180,110,1016,2025-02-05
+P0032,Household商品08,Household,370,190,1383,2025-07-21
+P0033,Household商品09,Household,360,170,718,2024-04-16
+P0034,Household商品10,Household,870,570,1015,2025-09-21
+P0035,Household商品11,Household,270,180,563,2025-12-01
+P0036,Household商品12,Household,660,370,1486,2024-09-02
+P0037,Fashion商品01,Fashion,140,90,298,2025-02-14
+P0038,Fashion商品02,Fashion,190,100,1626,2025-06-05
+P0039,Fashion商品03,Fashion,180,120,88,2025-11-13
+P0040,Fashion商品04,Fashion,460,250,651,2025-07-18
+P0041,Fashion商品05,Fashion,390,230,1276,2024-03-16
+P0042,Fashion商品06,Fashion,300,140,399,2025-03-20
+P0043,Fashion商品07,Fashion,260,130,1371,2024-04-03
+P0044,Fashion商品08,Fashion,390,190,634,2026-04-12
+P0045,Fashion商品09,Fashion,390,210,1244,2025-06-15
+P0046,Fashion商品10,Fashion,100,70,865,2025-03-10
+P0047,Fashion商品11,Fashion,490,230,587,2025-03-13
+P0048,Fashion商品12,Fashion,340,230,363,2025-05-29
+P0049,Others商品01,Others,300,150,1909,2024-10-25
+P0050,Others商品02,Others,330,180,604,2024-01-20
+P0051,Others商品03,Others,500,330,1108,2024-05-06
+P0052,Others商品04,Others,350,170,1348,2025-08-28
+P0053,Others商品05,Others,200,120,1474,2025-10-16
+P0054,Others商品06,Others,470,220,1248,2026-04-04
+P0055,Others商品07,Others,170,80,325,2025-05-14
+P0056,Others商品08,Others,250,160,947,2025-12-28
+P0057,Others商品09,Others,220,150,1287,2024-09-18
+P0058,Others商品10,Others,330,170,1983,2026-04-22
+P0059,Others商品11,Others,130,60,632,2025-01-26
+P0060,Others商品12,Others,590,390,227,2025-11-04
+P0061,Grocery商品01,Grocery,170,110,276,2025-04-11
+P0062,Grocery商品02,Grocery,70,40,704,2025-08-18
+P0063,Grocery商品03,Grocery,80,40,1486,2025-11-03
+P0064,Grocery商品04,Grocery,60,40,1898,2024-08-04
+P0065,Grocery商品05,Grocery,30,20,1789,2024-05-17
+P0066,Grocery商品06,Grocery,40,20,1453,2026-02-26
+P0067,Grocery商品07,Grocery,50,30,1996,2025-11-30
+P0068,Grocery商品08,Grocery,180,100,895,2024-05-09
+P0069,Grocery商品09,Grocery,10,10,594,2024-04-28
+P0070,Grocery商品10,Grocery,130,60,628,2025-03-31
+P0071,Grocery商品11,Grocery,130,80,863,2024-06-28
+P0072,Grocery商品12,Grocery,150,90,214,2025-10-27

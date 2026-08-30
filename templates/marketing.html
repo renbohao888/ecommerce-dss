@@ -1,0 +1,73 @@
+﻿{% extends 'base.html' %}
+{% block title %}营销策略优化 - 电商智能决策支持系统{% endblock %}
+{% block heading %}营销策略优化{% endblock %}
+{% block sub %}RFM 客户分层 · K-Means 聚类 · 个性化营销{% endblock %}
+
+{% block content %}
+<div class="cards">
+  <div class="card metric anim" style="animation-delay:.05s"><div class="label">平均满意度</div><div class="value green">{{ data.service.avg_sat }}</div><div class="hint">满意率 {{ data.service.sat_rate }}%</div></div>
+  <div class="card metric anim" style="animation-delay:.1s"><div class="label">人均投诉</div><div class="value red">{{ data.service.avg_comp }}</div><div class="hint">客服优化方向</div></div>
+  <div class="card metric anim" style="animation-delay:.15s"><div class="label">人均优惠券</div><div class="value orange">{{ data.service.avg_coupon }}</div><div class="hint">营销触达强度</div></div>
+  <div class="card metric anim" style="animation-delay:.2s"><div class="label">客户分层数</div><div class="value">{{ data.segs | length }}</div><div class="hint">K-Means 聚类</div></div>
+</div>
+
+<div class="grid two">
+  <div class="panel anim" style="animation-delay:.2s"><h3>客户价值分层占比</h3><div id="seg" class="chart"></div></div>
+  <div class="panel anim" style="animation-delay:.3s"><h3>RFM 价值分群（R 近度 × M 金额）</h3><div id="scatter" class="chart"></div></div>
+</div>
+
+<div class="panel anim" style="animation-delay:.4s">
+  <h3>分层经营策略</h3>
+  <table>
+    <thead><tr><th>客群</th><th>人数</th><th>占比</th><th>平均R(天)</th><th>平均F(单)</th><th>平均金额</th><th>满意度</th><th>投诉</th><th>推荐策略</th></tr></thead>
+    <tbody>
+      {% for s in data.segs %}
+      <tr>
+        <td><span class="badge {{ 'hv' if s.name=='高价值客户' else ('act' if s.name=='活跃客户' else ('pot' if s.name=='潜力客户' else 'loss')) }}">{{ s.name }}</span></td>
+        <td>{{ s.count }}</td><td>{{ s.pct }}%</td><td>{{ s.avgR }}</td><td>{{ s.avgF }}</td><td>¥{{ s.avgM }}</td>
+        <td>{{ s.sat }}</td><td>{{ s.comp }}</td><td>{{ s.strategy }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="panel anim" style="animation-delay:.5s">
+  <h3>高价值客户 Top 8</h3>
+  <table>
+    <thead><tr><th>用户ID</th><th>R(天)</th><th>F(单)</th><th>金额</th><th>分层</th></tr></thead>
+    <tbody>
+      {% for u in data.top_users %}
+      <tr><td>{{ u.user_id }}</td><td>{{ u.R }}</td><td>{{ u.F }}</td><td>¥{{ u.M }}</td><td>{{ u.seg }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const S = {{ data|tojson }};
+const colorMap = {'高价值客户':'#3b82f6','活跃客户':'#10b981','潜力客户':'#8b5cf6','流失风险客户':'#f43f5e'};
+renderChart('seg', {
+  tooltip:{trigger:'item', formatter: p=>p.name+'<br>'+p.value+' 人（'+p.percent+'%）'},
+  legend:{bottom:0},
+  series:[{type:'pie', radius:['35%','68%'], center:['50%','46%'],
+    itemStyle:{borderRadius:8, borderColor:'#0e1626', borderWidth:2, shadowBlur:14, shadowColor:'rgba(59,130,246,.3)'},
+    data:S.segs.map(x=>({name:x.name, value:x.count, itemStyle:{color:colorMap[x.name]}}))}]
+});
+const segNames = S.segs.map(x=>x.name);
+const series = segNames.map(n=>({
+  name:n, type:'scatter', symbolSize:8, itemStyle:{color:colorMap[n], shadowBlur:8, shadowColor:colorMap[n]},
+  data:S.scatter.filter(p=>p.seg===n).map(p=>[p.m, p.r])
+}));
+renderChart('scatter', {
+  tooltip:{trigger:'item', formatter: p=>p.seriesName+'<br>金额 ¥'+fmt(p.value[0])+' / R '+p.value[1]+'天'},
+  legend:{top:0},
+  grid:{left:74,right:20,top:44,bottom:56},
+  xAxis:{type:'value', name:'消费金额 M', nameLocation:'middle', nameGap:30},
+  yAxis:{type:'value', name:'近度 R(天)', nameLocation:'middle', nameGap:40},
+  series: series
+});
+</script>
+{% endblock %}

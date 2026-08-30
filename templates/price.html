@@ -1,0 +1,74 @@
+﻿{% extends 'base.html' %}
+{% block title %}商品价格优化 - 电商智能决策支持系统{% endblock %}
+{% block heading %}商品价格优化{% endblock %}
+{% block sub %}价格弹性估计 · 最优定价 · 收入提升评估{% endblock %}
+
+{% block content %}
+<form class="form-row anim" style="animation-delay:.02s" method="get" action="/price">
+  <label>选择品类查看需求曲线：</label>
+  <select name="cat" onchange="this.form.submit()">
+    {% for c in cats %}
+      <option value="{{ c }}" {{ 'selected' if c==cat else '' }}>{{ c }}</option>
+    {% endfor %}
+  </select>
+</form>
+
+<div class="cards">
+  <div class="card metric anim" style="animation-delay:.05s"><div class="label">可优化商品</div><div class="value">{{ data.count }}</div><div class="hint">已完成弹性估计</div></div>
+  <div class="card metric anim" style="animation-delay:.1s"><div class="label">当前品类弹性</div><div class="value orange">{{ curve.elasticity }}</div><div class="hint">{{ cat }}</div></div>
+  <div class="card metric anim" style="animation-delay:.15s"><div class="label">平均价格弹性</div><div class="value green">{{ data.avg_elasticity }}</div><div class="hint">负值越低越敏感</div></div>
+  <div class="card metric anim" style="animation-delay:.2s"><div class="label">建议调价商品</div><div class="value">{{ data.gains }}</div><div class="hint">预计增收 ¥{{ data.total_gain }}</div></div>
+</div>
+
+<div class="grid two">
+  <div class="panel anim" style="animation-delay:.25s"><h3>价格-需求曲线（{{ cat }}）</h3><div id="curve" class="chart"></div></div>
+  <div class="panel anim" style="animation-delay:.35s"><h3>价格弹性分布</h3><div id="elastic" class="chart small"></div></div>
+</div>
+
+<div class="panel anim" style="animation-delay:.45s">
+  <h3>最优定价建议（按预计增收排序）</h3>
+  <table>
+    <thead><tr><th>商品</th><th>品类</th><th>当前价</th><th>成本</th><th>弹性</th><th>建议价</th><th>调价幅度</th><th>现/新收入</th><th>预计增收</th></tr></thead>
+    <tbody>
+      {% for r in data.rows %}
+      <tr>
+        <td>{{ r.name }}</td><td>{{ r.category }}</td><td>¥{{ r.price }}</td><td>¥{{ r.cost }}</td>
+        <td>{{ r.elasticity }}</td>
+        <td><b style="color:#22d3ee">¥{{ r.optimal }}</b></td>
+        <td style="color:{{ '#f43f5e' if r.pct>0 else '#10b981' }}">{{ r.pct }}%</td>
+        <td>¥{{ r.cur_rev }} → ¥{{ r.new_rev }}</td>
+        <td><b style="color:#10b981">+¥{{ r.delta_rev }}</b></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const C = {{ curve|tojson }};
+renderChart('curve', {
+  tooltip:{trigger:'axis', formatter: p=>'价格 ¥'+p[0].value[0]+'<br>平均销量 '+p[0].value[1]+' 件'},
+  grid:{left:64,right:30,top:34,bottom:54},
+  xAxis:{type:'value', name:'单价(元)', nameLocation:'middle', nameGap:30},
+  yAxis:{type:'value', name:'平均销量(件)'},
+  series:[{type:'scatter', data:C.curve.map(x=>[x.price,x.qty]), symbolSize:11,
+    itemStyle:{color:'#22d3ee', shadowColor:'#22d3ee', shadowBlur:12, borderColor:'#fff', borderWidth:1},
+    markLine:{data:[{type:'average', name:'均值'}], lineStyle:{color:'#10b981', width:2, shadowColor:'#10b981', shadowBlur:8}}},
+    markPoint:{data:[{type:'max', name:'最高销量'},{type:'min', name:'最低销量'}], label:{color:'#fff'}}}]
+});
+const D = {{ data|tojson }};
+const els = D.rows.map(r=>({name:r.name, value:r.elasticity}));
+renderChart('elastic', {
+  tooltip:{trigger:'axis', axisPointer:{type:'shadow'}},
+  grid:{left:54,right:24,top:24,bottom:40},
+  xAxis:{type:'value', name:'价格弹性'},
+  yAxis:{type:'value'},
+  series:[{type:'bar', data:els.map(x=>x.value), name:'价格弹性', barWidth:7,
+    itemStyle:{borderRadius:[6,6,0,0], color:new echarts.graphic.LinearGradient(0,0,0,1,[
+      {offset:0,color:'#8b5cf6'},{offset:1,color:'rgba(139,92,246,.15)'}])},
+    showBackground:true, backgroundStyle:{color:'rgba(255,255,255,.03)', borderRadius:[6,6,0,0]}}]
+});
+</script>
+{% endblock %}

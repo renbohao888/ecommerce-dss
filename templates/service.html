@@ -1,0 +1,113 @@
+﻿{% extends 'base.html' %}
+{% block title %}客户服务优化 - 电商智能决策支持系统{% endblock %}
+{% block heading %}客户服务优化{% endblock %}
+{% block sub %}满意度画像 · 投诉归因 · 风险客户预警 · 服务策略{% endblock %}
+
+{% block content %}
+<div class="cards">
+  <div class="card metric anim" style="animation-delay:.05s"><div class="label">平均满意度</div><div class="value green">{{ data.kpis.avg_sat }}</div><div class="hint">5 分制</div></div>
+  <div class="card metric anim" style="animation-delay:.1s"><div class="label">平均评价分</div><div class="value">{{ data.kpis.avg_rating }}</div><div class="hint">样本 {{ data.kpis.reviews }}</div></div>
+  <div class="card metric anim" style="animation-delay:.15s"><div class="label">投诉用户</div><div class="value orange">{{ data.kpis.comp_users }}</div><div class="hint">累计投诉 {{ data.kpis.total_complaints }} 次</div></div>
+  <div class="card metric anim" style="animation-delay:.2s"><div class="label">投诉率</div><div class="value red">{{ data.kpis.comp_rate }}%</div><div class="hint">服务风险基线</div></div>
+  <div class="card metric anim" style="animation-delay:.25s"><div class="label">差评率</div><div class="value red">{{ data.kpis.neg_rate }}%</div><div class="hint">负面评价占比</div></div>
+</div>
+
+<div class="grid two">
+  <div class="panel anim" style="animation-delay:.25s"><h3>评价情感分布</h3><div id="sent" class="chart"></div></div>
+  <div class="panel anim" style="animation-delay:.35s"><h3>品类负面评价 vs 物流延迟率</h3><div id="combo" class="chart"></div></div>
+</div>
+
+<div class="grid two">
+  <div class="panel anim" style="animation-delay:.4s"><h3>投诉画像 · 设备</h3><div id="dev" class="chart small"></div></div>
+  <div class="panel anim" style="animation-delay:.5s"><h3>投诉画像 · 城市等级</h3><div id="city" class="chart small"></div></div>
+</div>
+
+<div class="grid two">
+  <div class="panel anim" style="animation-delay:.55s"><h3>负面评价最多的品类</h3><div id="negcat" class="chart small"></div></div>
+  <div class="panel anim" style="animation-delay:.6s"><h3>评分最低的品类</h3><div id="satcat" class="chart small"></div></div>
+</div>
+
+<div class="panel anim" style="animation-delay:.65s">
+  <h3>智能服务策略建议</h3>
+  <div class="profile" style="grid-template-columns:1fr">
+    {% for s in data.suggestions %}
+    <div class="item" style="display:flex;gap:10px;align-items:flex-start"><div class="v" style="font-size:18px">💡</div><div class="v" style="font-size:14px;font-weight:500;color:#dbe4f3;margin-top:2px">{{ s }}</div></div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="panel anim" style="animation-delay:.7s">
+  <h3>高投诉 / 低满意度风险客户 Top 10</h3>
+  <table>
+    <thead><tr><th>用户ID</th><th>满意度</th><th>投诉次数</th><th>设备</th><th>偏好品类</th><th>风险分</th></tr></thead>
+    <tbody>
+      {% for u in data.risk_users %}
+      <tr><td>{{ u.user_id }}</td><td>{{ u.sat }}/5</td><td><span class="badge loss">{{ u.comp }}</span></td><td>{{ u.device }}</td><td>{{ u.fav }}</td><td><b style="color:#f43f5e">{{ u.risk }}</b></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const D = {{ data|tojson }};
+renderChart('sent', {
+  tooltip:{trigger:'item', formatter: p=>p.name+'<br>'+p.value+' 条（'+p.percent+'%）'},
+  legend:{bottom:0},
+  series:[{type:'pie', radius:['40%','70%'], center:['50%','46%'],
+    itemStyle:{borderRadius:8, borderColor:'#0e1626', borderWidth:2, shadowBlur:14, shadowColor:'rgba(59,130,246,.3)'},
+    label:{fontSize:11, color:'#cbd5e1'},
+    data:D.sentiment}]
+});
+renderChart('combo', {
+  tooltip:{trigger:'axis'},
+  legend:{data:['负面评价','延迟率%'], top:0},
+  grid:{left:56,right:56,top:42,bottom:50},
+  xAxis:{type:'category', data:D.combo.map(x=>x.category), axisLabel:{rotate:20, fontSize:10}},
+  yAxis:[{type:'value', name:'条数'},{type:'value', name:'%', max:100}],
+  series:[
+    {name:'负面评价', type:'bar', data:D.combo.map(x=>x.neg), barWidth:20,
+     itemStyle:{borderRadius:[6,6,0,0], color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#f43f5e'},{offset:1,color:'rgba(244,63,94,.15)'}])}},
+    {name:'延迟率%', type:'line', yAxisIndex:1, data:D.combo.map(x=>x.delay), smooth:true,
+     lineStyle:{color:'#22d3ee', width:2.5, shadowColor:'#22d3ee', shadowBlur:10}, itemStyle:{color:'#22d3ee'}, symbol:'circle', symbolSize:8}
+  ]
+});
+renderChart('dev', {
+  tooltip:{trigger:'axis', axisPointer:{type:'shadow'}},
+  grid:{left:48,right:22,top:24,bottom:34},
+  xAxis:{type:'category', data:D.by_device.map(x=>x.name), axisLabel:{rotate:20, fontSize:10}},
+  yAxis:{type:'value', name:'投诉'},
+  series:[{type:'bar', data:D.by_device.map(x=>x.value), barWidth:32,
+    itemStyle:{borderRadius:[8,8,0,0], color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#8b5cf6'},{offset:1,color:'rgba(139,92,246,.15)'}])},
+    label:{show:true, position:'top', color:'#cbd5e1'}}]
+});
+renderChart('city', {
+  tooltip:{trigger:'axis', axisPointer:{type:'shadow'}},
+  grid:{left:48,right:22,top:24,bottom:34},
+  xAxis:{type:'category', data:D.by_city.map(x=>x.name)},
+  yAxis:{type:'value', name:'投诉'},
+  series:[{type:'bar', data:D.by_city.map(x=>x.value), barWidth:32,
+    itemStyle:{borderRadius:[8,8,0,0], color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#10b981'},{offset:1,color:'rgba(16,185,129,.15)'}])},
+    label:{show:true, position:'top', color:'#cbd5e1'}}]
+});
+renderChart('negcat', {
+  tooltip:{trigger:'axis', axisPointer:{type:'shadow'}},
+  grid:{left:150,right:40,top:14,bottom:32},
+  xAxis:{type:'value', name:'条数'},
+  yAxis:{type:'category', data:D.neg_cat.map(x=>x.name).reverse()},
+  series:[{type:'bar', data:D.neg_cat.map(x=>x.value).reverse(), barWidth:14,
+    itemStyle:{borderRadius:[0,8,8,0], color:new echarts.graphic.LinearGradient(1,0,0,0,[{offset:0,color:'rgba(251,113,133,.5)'},{offset:1,color:'#fb7185'}])},
+    label:{show:true, position:'right', color:'#cbd5e1'}}]
+});
+renderChart('satcat', {
+  tooltip:{trigger:'axis', axisPointer:{type:'shadow'}},
+  grid:{left:150,right:40,top:14,bottom:32},
+  xAxis:{type:'value', name:'评分', max:5},
+  yAxis:{type:'category', data:D.sat_cat.map(x=>x.name).reverse()},
+  series:[{type:'bar', data:D.sat_cat.map(x=>x.value).reverse(), barWidth:14,
+    itemStyle:{borderRadius:[0,8,8,0], color:new echarts.graphic.LinearGradient(1,0,0,0,[{offset:0,color:'rgba(251,191,36,.5)'},{offset:1,color:'#fbbf24'}])},
+    label:{show:true, position:'right', color:'#cbd5e1', formatter:'{c}'}}]
+});
+</script>
+{% endblock %}

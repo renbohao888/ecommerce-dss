@@ -1,0 +1,103 @@
+﻿{% extends 'base.html' %}
+{% block title %}用户行为与推荐 - 电商智能决策支持系统{% endblock %}
+{% block heading %}用户行为分析与个性化推荐{% endblock %}
+{% block sub %}基于物品协同过滤的用户画像与商品推荐{% endblock %}
+
+{% block content %}
+<form class="form-row anim" style="animation-delay:.02s" method="get" action="/recommend">
+  <label>选择用户：</label>
+  <select name="user_id" onchange="this.form.submit()">
+    {% for u in user_list %}
+      <option value="{{ u }}" {{ 'selected' if u==user_id else '' }}>用户 {{ u }}</option>
+    {% endfor %}
+  </select>
+  <label>或输入用户ID：</label>
+  <input type="number" name="user_id" value="{{ user_id }}" min="1" style="width:110px">
+  <button class="btn" type="submit">查询</button>
+  <span class="muted">当前推荐用户：{{ user_id }}</span>
+</form>
+
+<div class="grid two">
+  <div class="panel anim" style="animation-delay:.15s">
+    <h3>用户画像 · {{ user_id }}</h3>
+    {% if hist.profile %}
+    <div class="profile">
+      <div class="item"><div class="k">偏好品类</div><div class="v">{{ hist.profile.fav_category }}</div></div>
+      <div class="item"><div class="k">登录设备</div><div class="v">{{ hist.profile.device }}</div></div>
+      <div class="item"><div class="k">性别</div><div class="v">{{ hist.profile.gender }}</div></div>
+      <div class="item"><div class="k">年龄组</div><div class="v">{{ hist.profile.age_group }}</div></div>
+      <div class="item"><div class="k">城市等级</div><div class="v">{{ hist.profile.city_level }}</div></div>
+      <div class="item"><div class="k">使用时长(h)</div><div class="v">{{ hist.profile.hours_app }}</div></div>
+      <div class="item"><div class="k">上月下单</div><div class="v">{{ hist.profile.orders_last_month }}</div></div>
+      <div class="item"><div class="k">距上次下单(天)</div><div class="v">{{ hist.profile.days_since_order }}</div></div>
+      <div class="item"><div class="k">满意度</div><div class="v">{{ hist.profile.satisfaction }}/5</div></div>
+      <div class="item"><div class="k">投诉次数</div><div class="v">{{ hist.profile.complaints }}</div></div>
+      <div class="item"><div class="k">优惠券使用</div><div class="v">{{ hist.profile.coupons_used }}</div></div>
+    </div>
+    {% else %}
+    <p class="muted">该用户在行为库中暂无画像数据。</p>
+    {% endif %}
+  </div>
+  <div class="panel anim" style="animation-delay:.25s">
+    <h3>推荐结果 Top 8（物品协同过滤）</h3>
+    <div class="rec-grid">
+      {% for r in recs %}
+      <div class="rec anim" style="animation-delay:{{ 0.4 + loop.index * 0.08 }}s">
+        <div class="rank">#{{ loop.index }}</div>
+        <div class="nm">{{ r.name }}</div>
+        <span class="tag">{{ r.category }}</span>
+        <div class="price">¥{{ r.price }}</div>
+        <div class="reason">{{ r.reason }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% if not recs %}<p class="muted">暂无推荐结果。</p>{% endif %}
+  </div>
+</div>
+
+<div class="grid two">
+  <div class="panel anim" style="animation-delay:.4s"><h3>平台行为分布（浏览/加购/购买）</h3><div id="beh" class="chart small"></div></div>
+  <div class="panel anim" style="animation-delay:.5s"><h3>用户24小时活跃分布</h3><div id="hour" class="chart small"></div></div>
+</div>
+
+<div class="panel anim" style="animation-delay:.55s">
+  <h3>该用户近期交互记录</h3>
+  <table>
+    <thead><tr><th>商品</th><th>品类</th><th>价格</th><th>浏览</th><th>加购</th><th>购买</th></tr></thead>
+    <tbody>
+      {% for h in hist.history %}
+      <tr><td>{{ h.name }}</td><td>{{ h.category }}</td><td>¥{{ h.price }}</td><td>{{ h.view }}</td><td>{{ h.cart }}</td><td>{{ h.buy }}</td></tr>
+      {% else %}
+      <tr><td colspan="6" class="muted">暂无交互记录。</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const O = {{ overview|tojson }};
+renderChart('beh', {
+  tooltip:{trigger:'axis'},
+  xAxis:{type:'category', data:['浏览','加购','购买']},
+  yAxis:{type:'value', name:'次数'},
+  series:[{type:'bar', data:[O.counts.view, O.counts.cart, O.counts.purchase],
+    barWidth:42,
+    itemStyle:{borderRadius:[8,8,0,0], color:new echarts.graphic.LinearGradient(0,0,0,1,[
+      {offset:0,color:'#3b82f6'},{offset:1,color:'rgba(59,130,246,.15)'}])},
+    label:{show:true, position:'top', color:'#cbd5e1'}}]
+});
+renderChart('hour', {
+  tooltip:{trigger:'axis'},
+  grid:{left:46,right:20,top:24,bottom:30},
+  xAxis:{type:'category', data:O.hourly.map(x=>x.hour+'时')},
+  yAxis:{type:'value'},
+  series:[{type:'line', smooth:true, data:O.hourly.map(x=>x.value), symbol:'circle', symbolSize:6,
+    lineStyle:{width:2.5, color:'#22d3ee', shadowColor:'#22d3ee', shadowBlur:12},
+    areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[
+      {offset:0,color:'rgba(34,211,238,.4)'},{offset:1,color:'rgba(34,211,238,0)'}])},
+    itemStyle:{color:'#22d3ee', borderColor:'#fff', borderWidth:1}}]
+});
+</script>
+{% endblock %}

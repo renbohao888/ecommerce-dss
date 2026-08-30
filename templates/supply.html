@@ -1,0 +1,57 @@
+﻿{% extends 'base.html' %}
+{% block title %}供应链风控 - 电商智能决策支持系统{% endblock %}
+{% block heading %}供应链韧性监控与风控{% endblock %}
+{% block sub %}随机森林风险分类 · 配送延迟预警{% endblock %}
+
+{% block content %}
+<div class="cards">
+  <div class="card metric anim" style="animation-delay:.05s"><div class="label">物流延迟率</div><div class="value red">{{ data.delay_rate }}%</div><div class="hint">全量订单</div></div>
+  <div class="card metric anim" style="animation-delay:.1s"><div class="label">高风险预警</div><div class="value orange">{{ data.top | length }}</div><div class="hint">Top 风险订单</div></div>
+  <div class="card metric anim" style="animation-delay:.15s"><div class="label">监控维度</div><div class="value">{{ data.by_dist | length + data.by_cat | length }}</div><div class="hint">距离 &amp; 品类</div></div>
+  <div class="card metric anim" style="animation-delay:.2s"><div class="label">模型类型</div><div class="value green">RF</div><div class="hint">随机森林分类</div></div>
+</div>
+
+<div class="grid two">
+  <div class="panel anim" style="animation-delay:.25s"><h3>风险特征重要性</h3><div id="imp" class="chart"></div></div>
+  <div class="panel anim" style="animation-delay:.35s"><h3>按仓库距离的延迟率</h3><div id="dist" class="chart small"></div></div>
+</div>
+
+<div class="panel anim" style="animation-delay:.45s">
+  <h3>延迟预警订单 Top 20</h3>
+  <table>
+    <thead><tr><th>订单号</th><th>用户</th><th>商品</th><th>品类</th><th>仓库距离</th><th>配送(天)</th><th>风险概率</th></tr></thead>
+    <tbody>
+      {% for t in data.top %}
+      <tr><td>{{ t.order_id }}</td><td>{{ t.user_id }}</td><td>{{ t.product_id }}</td><td>{{ t.category }}</td><td>{{ t.dist }}</td><td>{{ t.delivery }}</td><td><b style="color:#f43f5e">{{ t.risk }}%</b></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const D = {{ data|tojson }};
+renderChart('imp', {
+  tooltip:{trigger:'axis', axisPointer:{type:'shadow'}},
+  grid:{left:132,right:44,top:14,bottom:32},
+  xAxis:{type:'value', name:'重要性'},
+  yAxis:{type:'category', data:D.imp.map(x=>x.name).reverse()},
+  series:[{type:'bar', data:D.imp.map(x=>x.value).reverse(), barWidth:14,
+    label:{show:true, position:'right', color:'#cbd5e1', formatter:'{c}'},
+    itemStyle:{borderRadius:[0,8,8,0], color:new echarts.graphic.LinearGradient(1,0,0,0,[
+      {offset:0,color:'rgba(251,146,60,.6)'},{offset:1,color:'#f97316'}]),
+      shadowColor:'rgba(249,115,22,.4)', shadowBlur:10}}]
+});
+renderChart('dist', {
+  tooltip:{trigger:'axis', axisPointer:{type:'shadow'}},
+  grid:{left:48,right:22,top:24,bottom:32},
+  xAxis:{type:'category', data:D.by_dist.map(x=>x.name)},
+  yAxis:{type:'value', name:'延迟率%'},
+  series:[{type:'bar', data:D.by_dist.map(x=>x.value), barWidth:26,
+    itemStyle:{borderRadius:[8,8,0,0], color:new echarts.graphic.LinearGradient(0,0,0,1,[
+      {offset:0,color:'#f43f5e'},{offset:1,color:'rgba(244,63,94,.15)'}])},
+    label:{show:true, position:'top', color:'#fda4af', formatter:'{c}%'}}]
+});
+</script>
+{% endblock %}

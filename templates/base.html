@@ -1,0 +1,249 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}电子商务大数据分析与智能决策支持系统{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <script src="{{ url_for('static', filename='js/echarts.min.js') }}"></script>
+</head>
+<body>
+<div id="progress"></div>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo">🛍</div>
+      <h1>电商智能决策<br>支持系统</h1>
+      <small>E-commerce DSS</small>
+    </div>
+    <ul class="nav">
+      <li><a href="/" class="{{ 'active' if page=='dashboard' else '' }}"><span class="ico">📊</span>数据总览</a></li>
+      <li><a href="/recommend" class="{{ 'active' if page=='recommend' else '' }}"><span class="ico">🛒</span>用户行为与推荐</a></li>
+      <li><a href="/forecast" class="{{ 'active' if page=='forecast' else '' }}"><span class="ico">📈</span>商品销售预测</a></li>
+      <li><a href="/marketing" class="{{ 'active' if page=='marketing' else '' }}"><span class="ico">🎯</span>营销策略优化</a></li>
+      <li><a href="/supply" class="{{ 'active' if page=='supply' else '' }}"><span class="ico">🚚</span>供应链风控</a></li>
+      <li><a href="/price" class="{{ 'active' if page=='price' else '' }}"><span class="ico">💰</span>商品价格优化</a></li>
+      <li><a href="/service" class="{{ 'active' if page=='service' else '' }}"><span class="ico">🎧</span>客户服务优化</a></li>
+      <li><a href="/data" class="{{ 'active' if page=='data' else '' }}"><span class="ico">🌐</span>外部数据源</a></li>
+    </ul>
+  </aside>
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h2>{% block heading %}{% endblock %}</h2>
+        <div class="sub">{% block sub %}{% endblock %}</div>
+      </div>
+      <div class="clock" id="clock">--</div>
+    </div>
+    <div class="livebar" id="livebar">
+      <span class="lv-dot"></span><span class="lv-label">LIVE</span>
+      <span class="lv-item">实时订单 <b id="lv-orders">--</b></span>
+      <span class="lv-item">实时GMV <b id="lv-gmv">--</b></span>
+      <span class="lv-item">近1分钟 <b id="lv-min">--</b> 单</span>
+      <span class="lv-item">平均客单 <b id="lv-avg">--</b></span>
+      <span class="lv-item">延迟单 <b id="lv-delay">--</b></span>
+      <span class="lv-grow" id="lv-grow">--</span>
+      <div class="lv-spark" id="lv-spark" title="最近几批实时GMV走势"></div>
+      <button class="lv-refresh" id="lv-refresh" type="button">图表自动刷新：开</button>
+    </div>
+    {% block content %}{% endblock %}
+    <footer>电子商务大数据分析与智能决策支持系统 —— 中国大学生计算机设计大赛·大数据主题赛 &nbsp;|&nbsp; 数据源：阿里天池 Rec-Tmall 等 <span class="src">【自增公开数据集】</span></footer>
+  </main>
+</div>
+<!-- AI 悬浮问答球 -->
+<div id="ai-fab" class="ai-fab" title="AI 数据助手">🤖</div>
+<div id="ai-panel" class="ai-panel">
+  <div class="ai-head">
+    <div class="ai-avatar">🤖</div>
+    <div>
+      <div class="ai-title">AI 数据助手</div>
+      <div class="ai-sub">在线 · 可回答系统数据问题</div>
+    </div>
+    <button class="ai-close" id="ai-close" title="关闭">×</button>
+  </div>
+  <div class="ai-body" id="ai-body">
+    <div class="ai-msg bot">你好！我是数据助理 🤖，点击下方问题或直接输入，即可解答系统内的数据问题。</div>
+  </div>
+  <div class="ai-chips" id="ai-chips"></div>
+  <div class="ai-input">
+    <input id="ai-text" type="text" placeholder="例如：总销售额是多少？" autocomplete="off">
+    <button id="ai-send" title="发送">➤</button>
+  </div>
+</div>
+
+
+<script>
+var PALETTE=['#3b82f6','#22d3ee','#8b5cf6','#10b981','#fbbf24','#f43f5e','#ec4899','#60a5fa','#818cf8','#f97316'];
+// 给任意 ECharts option 注入暗色高级默认样式
+function __applyDark(o){
+  o = o || {};
+  o.color = o.color || PALETTE;
+  o.backgroundColor = 'transparent';
+  if(o.textStyle===undefined) o.textStyle={color:'#cbd5e1',fontSize:12};
+  var tt = o.tooltip;
+  if(!tt) o.tooltip={};
+  if(o.tooltip){ o.tooltip.backgroundColor=o.tooltip.backgroundColor||'rgba(17,24,39,.95)';
+    o.tooltip.borderColor=o.tooltip.borderColor||'rgba(255,255,255,.12)';
+    o.tooltip.borderWidth=o.tooltip.borderWidth||1;
+    o.tooltip.textStyle=o.tooltip.textStyle||{color:'#e8edf7'};
+    o.tooltip.extraCssText=o.tooltip.extraCssText||'box-shadow:0 8px 28px rgba(0,0,0,.6);backdrop-filter:blur(6px);border-radius:10px;';
+  }
+  ['xAxis','yAxis'].forEach(function(k){
+    var ax = o[k]; if(!ax) return;
+    function style(a){ a=a||{};
+      a.axisLine=a.axisLine||{lineStyle:{color:'rgba(255,255,255,.15)'}};
+      a.axisLabel=a.axisLabel||{color:'#94a3b8'};
+      a.axisTick=a.axisTick||{lineStyle:{color:'rgba(255,255,255,.15)'}};
+      a.splitLine=a.splitLine||{lineStyle:{color:'rgba(255,255,255,.06)'}};
+      a.nameTextStyle=a.nameTextStyle||{color:'#94a3b8'}; return a;
+    }
+    if(Array.isArray(ax)) o[k]=ax.map(style); else o[k]=style(ax);
+  });
+  // 图例文字颜色
+  if(o.legend){ if(!o.legend.textStyle) o.legend.textStyle={color:'#cbd5e1',fontSize:12}; }
+  return o;
+}
+function renderChart(id, option){
+  var el=document.getElementById(id);
+  if(!el) return;
+  if(typeof echarts==='undefined'){ el.innerHTML='<div style="color:#94a3b8;text-align:center;padding:44px 0">ECharts 组件未加载</div>'; return; }
+  window._charts = window._charts || {};
+  var chart = window._charts[id] || echarts.init(el);
+  window._charts[id]=chart;
+  chart.setOption(__applyDark(option), true);
+  chart.resize();
+}
+function fmt(n){ return (n==null?'0':Number(n).toLocaleString('zh-CN')); }
+function money(n){ return '¥'+(n==null?'0':Number(n).toLocaleString('zh-CN',{maximumFractionDigits:0})); }
+// 顶部进度条随滚动
+window.addEventListener('scroll',function(){
+  var h=document.documentElement, sc=(h.scrollTop)/((h.scrollHeight-h.clientHeight)||1);
+  var p=document.getElementById('progress'); if(p) p.style.width=Math.round(sc*100)+'%';
+});
+// 时钟
+function tick(){ var d=new Date(); var s=d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2)+' '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2)+':'+('0'+d.getSeconds()).slice(-2); var c=document.getElementById('clock'); if(c) c.textContent=s; }
+tick(); setInterval(tick,1000);
+window.addEventListener('resize',function(){ for(var k in (window._charts||{})){ try{window._charts[k].resize();}catch(e){} } });
+</script>
+<script>
+(function(){
+  var fab=document.getElementById('ai-fab'),panel=document.getElementById('ai-panel');
+  var body=document.getElementById('ai-body'),text=document.getElementById('ai-text');
+  var chips=document.getElementById('ai-chips'),sendBtn=document.getElementById('ai-send');
+  var closeBtn=document.getElementById('ai-close');
+  var open=false;
+  // 可拖动悬浮球
+  var drag=false,moved=false,sx,sy,ox,oy;
+  fab.addEventListener('pointerdown',function(e){drag=true;moved=false;sx=e.clientX;sy=e.clientY;
+    var r=fab.getBoundingClientRect();ox=r.left;oy=r.top;try{fab.setPointerCapture(e.pointerId);}catch(_){}});
+  fab.addEventListener('pointermove',function(e){if(!drag)return;var dx=e.clientX-sx,dy=e.clientY-sy;
+    if(Math.abs(dx)>4||Math.abs(dy)>4)moved=true;
+    var nx=Math.min(Math.max(ox+dx,8),window.innerWidth-fab.offsetWidth-8);
+    var ny=Math.min(Math.max(oy+dy,8),window.innerHeight-fab.offsetHeight-8);
+    fab.style.left=nx+'px';fab.style.top=ny+'px';fab.style.right='auto';fab.style.bottom='auto';});
+  fab.addEventListener('pointerup',function(){drag=false;if(!moved)toggle();});
+  fab.addEventListener('pointercancel',function(){drag=false;});
+  function positionPanel(){var r=fab.getBoundingClientRect();var pw=panel.offsetWidth,ph=panel.offsetHeight;
+    var left=r.left,top=r.top-ph-16;if(top<8)top=r.bottom+16;
+    if(top+ph>window.innerHeight-8)top=Math.max(8,window.innerHeight-ph-8);
+    if(left+pw>window.innerWidth-8)left=Math.max(8,window.innerWidth-pw-8);if(left<8)left=8;
+    panel.style.left=Math.round(left)+'px';panel.style.top=Math.round(top)+'px';
+    panel.style.right='auto';panel.style.bottom='auto';}
+  function toggle(){open=!open;if(open){positionPanel();panel.classList.add('open');text.focus();}
+    else panel.classList.remove('open');}
+  closeBtn.addEventListener('click',function(){open=false;panel.classList.remove('open');});
+  function esc(s){return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+  function addMsg(t,who){var d=document.createElement('div');d.className='ai-msg '+who;
+    d.innerHTML=esc(t).replace(/\n/g,'<br>').replace(/\*\*(.+?)\*\*/g,'<b>$1</b>');
+    body.appendChild(d);body.scrollTop=body.scrollHeight;return d;}
+  function addTyping(){var d=document.createElement('div');d.className='ai-msg bot typing';
+    d.innerHTML='<span></span><span></span><span></span>';body.appendChild(d);body.scrollTop=body.scrollHeight;return d;}
+  function addChips(list){chips.innerHTML='';(list||[]).forEach(function(c){
+    var b=document.createElement('button');b.className='ai-chip';b.textContent=c;
+    b.onclick=function(){text.value=c;send();};chips.appendChild(b);});}
+  function renderChartIn(bubble,opt){var div=document.createElement('div');div.className='ai-chart';
+    bubble.appendChild(div);var id='aich'+Math.random().toString(36).slice(2);div.id=id;
+    if(typeof echarts==='undefined'){div.innerHTML='图表组件未加载';return;}
+    window._charts=window._charts||{};var c=window._charts[id]||echarts.init(div);window._charts[id]=c;
+    c.setOption(__applyDark(opt),true);setTimeout(function(){c.resize();},40);}
+  function send(){var v=(text.value||'').trim();if(!v)return;addMsg(v,'user');text.value='';var ty=addTyping();
+    fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:v})})
+      .then(function(r){return r.json();})
+      .then(function(res){ty.remove();var bot=addMsg(res.reply||'抱歉，请换个问题再试。','bot');
+        if(res.chart)renderChartIn(bot,res.chart);addChips(res.suggestions);})
+      .catch(function(){ty.remove();addMsg('抱歉，服务暂时不可用，请稍后再试。','bot');});}
+  sendBtn.addEventListener('click',send);
+  text.addEventListener('keydown',function(e){if(e.key==='Enter')send();});
+  addChips(['总销售额','热销品类排行榜','每天销售走势','预测未来14天销量','客户分层与营销建议','物流延迟率是多少']);
+})();
+</script>
+<script>
+// 实时数据状态栏：每 2 秒轮询 /api/live，刷新 LIVE 数字 + 实时趋势迷你图；
+// 并提供“整页自动刷新”（让所有图表随模型重算更新）开关，默认开，含滚动位置保留。
+(function(){
+  var $=function(id){return document.getElementById(id);};
+  var o=$('lv-orders'),g=$('lv-gmv'),mn=$('lv-min'),av=$('lv-avg'),
+      dl=$('lv-delay'),gr=$('lv-grow'),bt=$('lv-refresh'),spEl=$('lv-spark');
+  var AUTO_SEC=20, autoOn=true, sec=AUTO_SEC, spark=null;
+  function fmt(n){return (n==null?'--':Number(n).toLocaleString('zh-CN',{maximumFractionDigits:0}));}
+  function money(n){return (n==null?'--':'¥'+Number(n).toLocaleString('zh-CN',{maximumFractionDigits:0}));}
+  // 先恢复上一页滚动位置，避免整页刷新后跳回顶部
+  (function(){var sy=parseInt(sessionStorage.getItem('__dss_scroll')||'0',10);if(sy>0){window.scrollTo(0,sy);sessionStorage.removeItem('__dss_scroll');}})();
+  function initSpark(){
+    if(!spEl||typeof echarts==='undefined')return;
+    spark=echarts.init(spEl);
+    spark.setOption({backgroundColor:'transparent',
+      grid:{left:2,right:2,top:5,bottom:2},
+      xAxis:{type:'category',show:false,data:[]},
+      yAxis:{type:'value',show:false,scale:true},
+      series:[{type:'line',smooth:true,symbol:'none',lineStyle:{width:2,color:'#22d3ee'},
+        areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[
+          {offset:0,color:'rgba(34,211,238,.5)'},{offset:1,color:'rgba(34,211,238,0)'}])},
+        data:[]}]});
+  }
+  function drawSpark(hist){
+    if(!spark)return;
+    var g=[],xs=[];
+    (hist||[]).forEach(function(h){xs.push(h.t);g.push(h.g);});
+    spark.setOption({xAxis:{data:xs},
+      series:[{data:g, areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[
+          {offset:0,color:'rgba(34,211,238,.5)'},{offset:1,color:'rgba(34,211,238,0)'}])}}]});
+  }
+  function load(){
+    fetch('/api/live').then(function(r){return r.json();}).then(function(d){
+      var hot=false;
+      if(o)o.textContent=fmt(d.orders_total);
+      if(g)g.textContent=money(d.gmv_total);
+      if(mn)mn.textContent=fmt(d.orders_last_min);
+      if(av)av.textContent=money(d.avg_order);
+      if(dl){var dn=fmt(d.delayed_last_min);dl.textContent=dn;if((d.delayed_last_min||0)>0)hot=true;}
+      if(gr){var k=d.delay_rate_last_min;gr.textContent=(k==null?'--':(k>8?'⚠ '+k+'%':k+'%'));if(k!=null&&k>8)hot=true;}
+      if(gr)gr.className='lv-grow'+(hot?' hot':'');
+      drawSpark(d.hist);
+    }).catch(function(){});
+  }
+  function countdown(){
+    if(!autoOn)return;
+    sec--;
+    if(sec<=0){
+      sec=AUTO_SEC;
+      var y=window.scrollY||document.documentElement.scrollTop||0;
+      try{sessionStorage.setItem('__dss_scroll',y);}catch(e){}
+      location.reload();
+      return;
+    }
+    if(bt)bt.textContent='图表自动刷新：开（'+sec+'s）';
+  }
+  if(bt){
+    bt.textContent=autoOn?('图表自动刷新：开（'+sec+'s）'):'图表自动刷新：关';
+    bt.onclick=function(){
+      autoOn=!autoOn; sec=AUTO_SEC;
+      bt.textContent=autoOn?('图表自动刷新：开（'+sec+'s）'):'图表自动刷新：关';
+    };
+  }
+  initSpark();load();setInterval(load,2000);setInterval(countdown,1000);
+})();
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

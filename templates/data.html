@@ -1,0 +1,87 @@
+﻿{% extends 'base.html' %}
+{% block title %}外部数据源 - 电商智能决策支持系统{% endblock %}
+{% block heading %}外部数据源 · 全球市场洞察{% endblock %}
+{% block sub %}自增公开数据集 UCI Online Retail（2010-12 ~ 2011-12）{% endblock %}
+
+{% block content %}
+<div class="panel anim" style="animation-delay:.03s">
+  <h3>数据来源说明</h3>
+  <p class="muted" style="line-height:1.9">{{ data.desc }}</p>
+  <p style="margin-top:10px">来源：<a href="{{ data.source }}" target="_blank" rel="noopener" style="color:#22d3ee">{{ data.source }}</a></p>
+</div>
+
+<div class="cards">
+  <div class="card metric anim" style="animation-delay:.08s"><div class="label">交易笔数</div><div class="value">{{ data.kpis.transactions }}</div><div class="hint">去重发票</div></div>
+  <div class="card metric anim" style="animation-delay:.12s"><div class="label">总营收(£)</div><div class="value green">{{ data.kpis.revenue }}</div><div class="hint">客单价 £{{ data.kpis.avg_order }}</div></div>
+  <div class="card metric anim" style="animation-delay:.16s"><div class="label">客户数</div><div class="value">{{ data.kpis.customers }}</div><div class="hint">去重客户</div></div>
+  <div class="card metric anim" style="animation-delay:.2s"><div class="label">商品数</div><div class="value">{{ data.kpis.products }}</div><div class="hint">SKU 总数</div></div>
+  <div class="card metric anim" style="animation-delay:.24s"><div class="label">国家数</div><div class="value orange">{{ data.kpis.countries }}</div><div class="hint">覆盖市场</div></div>
+  <div class="card metric anim" style="animation-delay:.28s"><div class="label">退货率</div><div class="value red">{{ data.ret_rate }}%</div><div class="hint">负数量占比</div></div>
+</div>
+
+<div class="grid">
+  <div class="panel anim" style="animation-delay:.25s"><h3>月度营收趋势（£）</h3><div id="mon" class="chart tall"></div></div>
+</div>
+
+<div class="grid two">
+  <div class="panel anim" style="animation-delay:.35s"><h3>各国家营收（Top 10）</h3><div id="country" class="chart"></div></div>
+  <div class="panel anim" style="animation-delay:.45s"><h3>一周营收分布</h3><div id="wk" class="chart small"></div></div>
+</div>
+
+<div class="grid two">
+  <div class="panel anim" style="animation-delay:.5s"><h3>热销商品 Top 10（按营收）</h3><div id="prod" class="chart"></div></div>
+  <div class="panel anim" style="animation-delay:.6s"><h3>高价值客户 Top 10（按消费）</h3><div id="cust" class="chart"></div></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const D = {{ data|tojson }};
+renderChart('mon', {
+  tooltip:{trigger:'axis', formatter: ps=>ps[0].name+'<br>£'+fmt(ps[0].value)},
+  grid:{left:70,right:30,top:40,bottom:50},
+  xAxis:{type:'category', data:D.monthly.map(x=>x.name), axisLabel:{rotate:30, fontSize:10}},
+  yAxis:{type:'value', name:'营收(£)'},
+  series:[{type:'line', smooth:true, symbol:'circle', symbolSize:8,
+    lineStyle:{width:3, color:'#22d3ee', shadowColor:'#22d3ee', shadowBlur:14},
+    areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(34,211,238,.45)'},{offset:1,color:'rgba(34,211,238,0)'}])},
+    itemStyle:{color:'#22d3ee', borderColor:'#fff', borderWidth:2},
+    data:D.monthly.map(x=>x.value)}]
+});
+renderChart('country', {
+  tooltip:{trigger:'axis', axisPointer:{type:'shadow'}, formatter: ps=>ps[0].name+'<br>£'+fmt(ps[0].value)},
+  grid:{left:120,right:50,top:10,bottom:30},
+  xAxis:{type:'value', name:'营收(£)'},
+  yAxis:{type:'category', data:D.country.map(x=>x.name).reverse()},
+  series:[{type:'bar', data:D.country.map(x=>x.value).reverse(), barWidth:16,
+    itemStyle:{borderRadius:[0,8,8,0], color:new echarts.graphic.LinearGradient(1,0,0,0,[{offset:0,color:'rgba(59,130,246,.5)'},{offset:1,color:'#3b82f6'}])},
+    label:{show:true, position:'right', color:'#cbd5e1', formatter:'£{c}'}}]
+});
+renderChart('wk', {
+  tooltip:{trigger:'axis', axisPointer:{type:'shadow'}, formatter: ps=>ps[0].name+'<br>£'+fmt(ps[0].value)},
+  grid:{left:50,right:20,top:30,bottom:34},
+  xAxis:{type:'category', data:['周一','周二','周三','周四','周五','周六','周日']},
+  yAxis:{type:'value', name:'£'},
+  series:[{type:'bar', data:D.weekday.map(x=>x.value), barWidth:30,
+    itemStyle:{borderRadius:[8,8,0,0], color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#8b5cf6'},{offset:1,color:'rgba(139,92,246,.15)'}])}}]
+});
+renderChart('prod', {
+  tooltip:{trigger:'axis', axisPointer:{type:'shadow'}, formatter: ps=>ps[0].name+'<br>£'+fmt(ps[0].value)},
+  grid:{left:190,right:60,top:10,bottom:30},
+  xAxis:{type:'value', name:'营收(£)'},
+  yAxis:{type:'category', data:D.products.map(x=>x.name).reverse()},
+  series:[{type:'bar', data:D.products.map(x=>x.value).reverse(), barWidth:14,
+    itemStyle:{borderRadius:[0,8,8,0], color:new echarts.graphic.LinearGradient(1,0,0,0,[{offset:0,color:'rgba(16,185,129,.5)'},{offset:1,color:'#10b981'}])},
+    label:{show:true, position:'right', color:'#cbd5e1', formatter:'£{c}'}}]
+});
+renderChart('cust', {
+  tooltip:{trigger:'axis', axisPointer:{type:'shadow'}, formatter: ps=>'客户 '+ps[0].name+'<br>£'+fmt(ps[0].value)},
+  grid:{left:80,right:60,top:10,bottom:30},
+  xAxis:{type:'value', name:'消费(£)'},
+  yAxis:{type:'category', data:D.customers.map(x=>'#'+x.id).reverse()},
+  series:[{type:'bar', data:D.customers.map(x=>x.value).reverse(), barWidth:14,
+    itemStyle:{borderRadius:[0,8,8,0], color:new echarts.graphic.LinearGradient(1,0,0,0,[{offset:0,color:'rgba(249,115,22,.5)'},{offset:1,color:'#f97316'}])},
+    label:{show:true, position:'right', color:'#cbd5e1', formatter:'£{c}'}}]
+});
+</script>
+{% endblock %}

@@ -1,0 +1,9 @@
+# Render 一键部署配置：push 到 GitHub 后，在 Render 后台 “New > Blueprint” 选择该仓库即可自动创建
+services:
+  - type: web
+    name: ecommerce-dss
+    runtime: python
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "python app.py"
+    plan: free
+    autoDeploy: true

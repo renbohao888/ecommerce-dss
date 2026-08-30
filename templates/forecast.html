@@ -1,0 +1,84 @@
+﻿{% extends 'base.html' %}
+{% block title %}商品销售预测 - 电商智能决策支持系统{% endblock %}
+{% block heading %}商品销售预测{% endblock %}
+{% block sub %}随机森林时序回归 · 未来销量预测{% endblock %}
+
+{% block content %}
+<form class="form-row anim" style="animation-delay:.02s" method="get" action="/forecast">
+  <label>预测周期：</label>
+  {% for d in [7,14,30] %}
+    <button class="btn" type="submit" name="days" value="{{ d }}" style="{{ 'background:var(--grad);' if d==days else 'background:rgba(255,255,255,.06);box-shadow:none;' }}">{{ d }} 天</button>
+  {% endfor %}
+  <span class="muted">模型 MAE = ¥{{ data.mae }} · RMSE = ¥{{ data.rmse }} · 历史截至 {{ data.last_date }}</span>
+</form>
+
+<div class="cards">
+  <div class="card metric anim" style="animation-delay:.05s"><div class="label">预测区间</div><div class="value">{{ data.dates[0] }} ~ {{ data.dates[-1] }}</div><div class="hint">共 {{ days }} 天</div></div>
+  <div class="card metric anim" style="animation-delay:.1s"><div class="label">首日预测 GMV</div><div class="value green">¥{{ data.forecast[0] }}</div><div class="hint">较近期均值</div></div>
+  <div class="card metric anim" style="animation-delay:.15s"><div class="label">预测期合计 GMV</div><div class="value">¥{{ data.forecast | sum }}</div><div class="hint">趋势判断</div></div>
+  <div class="card metric anim" style="animation-delay:.2s"><div class="label">模型 MAE</div><div class="value orange">¥{{ data.mae }}</div><div class="hint">平均绝对误差</div></div>
+</div>
+
+<div class="panel anim" style="animation-delay:.2s">
+  <h3>销售额历史与预测（<b style="color:#f43f5e">红 = 预测</b>）</h3>
+  <div id="fc" class="chart tall"></div>
+</div>
+
+<div class="panel anim" style="animation-delay:.3s">
+  <h3>各品类预测期销量趋势</h3>
+  <div id="catfc" class="chart"></div>
+</div>
+
+<div class="panel anim" style="animation-delay:.4s">
+  <h3>分品类销量预测明细</h3>
+  <table>
+    <thead>
+      <tr><th>品类</th>{% for dd in data.dates %}<th>{{ dd[5:] }}</th>{% endfor %}</tr>
+    </thead>
+    <tbody>
+      {% for c in data.cat_forecast %}
+      <tr><td>{{ c.category }}</td>{% for v in c.qty %}<td>{{ v }}</td>{% endfor %}</tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const D = {{ data|tojson }};
+const histDates = D.history.date;
+const futDates = D.dates;
+const allDates = histDates.concat(futDates);
+const histVals = D.history.gmv.concat(new Array(futDates.length).fill(null));
+const futVals = new Array(histDates.length).fill(null).concat(D.forecast);
+renderChart('fc', {
+  tooltip:{trigger:'axis'},
+  legend:{data:['历史销售额','预测销售额'], top:0},
+  grid:{left:64,right:30,top:42,bottom:60},
+  xAxis:{type:'category', data:allDates, axisLabel:{show:false}},
+  dataZoom:[{type:'inside', start:65, end:100},{type:'slider', start:65, end:100, height:16, bottom:10}],
+  yAxis:{type:'value', name:'GMV(元)'},
+  series:[
+    {name:'历史销售额', type:'line', smooth:true, showSymbol:false, data:histVals,
+     lineStyle:{width:2, color:'#3b82f6'}, itemStyle:{color:'#3b82f6'},
+     areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[
+       {offset:0,color:'rgba(59,130,246,.35)'},{offset:1,color:'rgba(59,130,246,0)'}])}},
+    {name:'预测销售额', type:'line', smooth:true, showSymbol:false, data:futVals,
+     lineStyle:{width:3, color:'#f43f5e', shadowColor:'#f43f5e', shadowBlur:12}, itemStyle:{color:'#f43f5e'},
+     areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[
+       {offset:0,color:'rgba(244,63,94,.4)'},{offset:1,color:'rgba(244,63,94,0)'}])}}
+  ]
+});
+const C = {{ cat_data|tojson }};
+renderChart('catfc', {
+  tooltip:{trigger:'axis'},
+  legend:{top:0, type:'scroll'},
+  grid:{left:54,right:24,top:44,bottom:60},
+  xAxis:{type:'category', data:D.dates},
+  yAxis:{type:'value', name:'销量(件)'},
+  dataZoom:[{type:'slider', height:14, bottom:8}],
+  series:C
+});
+</script>
+{% endblock %}

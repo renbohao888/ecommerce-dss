@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+*.log
+.DS_Store
+venv/
+.venv/
+.env
+.deploy_backup/
+*.sqlite3
+
+# 大文件：外部公开数据集（约23MB，首次使用时自动从UCI下载，不入库以避免Git推送超时）
+data/_online_retail.xlsx
