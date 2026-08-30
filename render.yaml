@@ -7,3 +7,4 @@ services:
     startCommand: "python app.py"
     plan: free
     autoDeploy: true
+    healthCheckPath: /health
