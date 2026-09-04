@@ -130,6 +130,30 @@ def api_chat():
     return jsonify(ans)
 
 
+def _warmup():
+    """启动后在后台预训练所有模型，使各页面首次导航即命中缓存，避免“首次访问慢/反复重训”。
+
+    这是解决“页面跳转缓慢”的关键之一：不再把模型缓存置空后在请求线程里同步重训，
+    而是启动即预热、后台定时保温重算。若本地已有外部数据集文件，则一并预热「外部数据源」页，
+    使其首次访问也秒开（缺失时跳过，避免启动阶段联网下载）。
+    """
+    time.sleep(1.0)
+    try:
+        M.refresh()
+        print('[启动] 模型预训练完成（推荐/预测/营销/风控/价格缓存已构建），页面导航将保持流畅。', flush=True)
+    except Exception as e:
+        print('[启动] 模型预训练失败：%s' % e)
+
+    data_dir = os.path.join(BASE, 'data')
+    if os.path.exists(os.path.join(data_dir, '_online_retail.csv.gz')) or \
+       os.path.exists(os.path.join(data_dir, '_online_retail.xlsx')):
+        try:
+            M.external_data()
+            print('[启动] 外部数据集已预热，「数据源」页将秒开。', flush=True)
+        except Exception as e:
+            print('[启动] 外部数据集预热失败：%s' % e)
+
+
 def _start_live():
     """启动实时数据流 + 定时重算调度（后台守护线程）。"""
     try:
@@ -137,6 +161,9 @@ def _start_live():
         print('[实时] 实时数据流已启动：每 %.1fs 生成一批新数据。' % LIVE_TICK, flush=True)
     except Exception as e:
         print('[实时] 实时数据流启动失败：%s' % e)
+
+    # 启动即后台预热模型（首次导航秒开）
+    threading.Thread(target=_warmup, daemon=True).start()
 
     def _scheduler():
         time.sleep(REFRESH_SEC)

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """机器学习/数据分析模型层：负责加载数据、训练模型、产出页面所需的图表数据。"""
 import os
+import threading
 import urllib.request
 import numpy as np
 import pandas as pd
@@ -10,6 +11,10 @@ from ml import live as LIVE
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA = os.path.join(BASE, 'data')
 _cache = {}
+
+# 模型训练/重算互斥锁：避免“后台定时重算”与“页面请求触发的按需训练”并发导致的双重训练/竞态崩溃，
+# 同时保证请求线程读到的始终是一个完整可用的模型对象。
+_train_lock = threading.RLock()
 
 
 def load(name):
@@ -52,13 +57,19 @@ def reviews():
 
 
 def refresh():
-    """清空各模块的模型缓存，使它们在下次调用时基于最新数据重新训练（定时重算用）。"""
-    global _user_item, _forecast, _marketing, _supply, _price
-    _user_item = None
-    _forecast = None
-    _marketing = None
-    _supply = None
-    _price = None
+    """定时/启动时在后台重算所有模型缓存，使结果随最新实时数据自动更新。
+
+    与旧版的区别：不再把缓存置空（那会迫使下一个页面请求在“请求线程”里同步重训，
+    造成页面跳转缓慢，并存在并发置空竞态）。这里改为“保温重算”——每个模型在锁内
+    重建并整体替换，请求线程读到的始终是完整可用的模型，因此页面导航始终保持快速。
+    """
+    for trainer in (train_recommend, train_forecast, train_marketing,
+                    train_supplychain, train_price):
+        try:
+            with _train_lock:
+                trainer()
+        except Exception as e:
+            print('[模型] %s 重算失败：%s' % (getattr(trainer, '__name__', trainer), e), flush=True)
 
 
 def _num(x, nd=2):
@@ -151,7 +162,9 @@ def recommend(user_id, topn=8):
     """基于物品相似度为 user_id 推荐 topn 个商品。"""
     global _user_item
     if _user_item is None:
-        train_recommend()
+        with _train_lock:
+            if _user_item is None:
+                train_recommend()
     piv, sim, items = _user_item['piv'], _user_item['sim'], _user_item['items']
     prod = products().set_index('product_id')
 
@@ -263,7 +276,9 @@ def train_forecast():
 def forecast(days=14):
     global _forecast
     if _forecast is None:
-        train_forecast()
+        with _train_lock:
+            if _forecast is None:
+                train_forecast()
     daily, model, nrows, mae = _forecast['daily'], _forecast['model'], _forecast['nrows'], _forecast['mae']
     last = daily['date'].max()
     fut = pd.date_range(last + pd.Timedelta(days=1), periods=days)
@@ -345,7 +360,9 @@ def train_marketing():
 def marketing_data():
     global _marketing
     if _marketing is None:
-        train_marketing()
+        with _train_lock:
+            if _marketing is None:
+                train_marketing()
     d = {
         'segs': _marketing['segs'], 'scatter': _marketing['scatter'],
         'service': _marketing['service'],
@@ -397,7 +414,9 @@ def train_supplychain():
 def supplychain_data():
     global _supply
     if _supply is None:
-        train_supplychain()
+        with _train_lock:
+            if _supply is None:
+                train_supplychain()
     return {'imp': [{'name': k, 'value': _num(v, 4)} for k, v in _supply['imp']],
             'by_dist': _supply['by_dist'], 'by_cat': _supply['by_cat'],
             'delay_rate': _supply['delay_rate'], 'top': _supply['top']}
@@ -456,7 +475,9 @@ def train_price():
 def price_data():
     global _price
     if _price is None:
-        train_price()
+        with _train_lock:
+            if _price is None:
+                train_price()
     rows = _price['rows']
     if rows:
         avg_el = sum(r['elasticity'] for r in rows) / len(rows)
@@ -600,25 +621,48 @@ _UCI_XLSX_URL = 'https://archive.ics.uci.edu/ml/machine-learning-databases/00352
 
 
 def _ensure_online_retail():
-    """确保外部数据集文件存在；缺失时自动从 UCI 下载（公网部署环境无该文件时使用）。"""
-    target = os.path.join(DATA, '_online_retail.xlsx')
-    if os.path.exists(target):
+    """确保外部数据源文件存在；缺损时自动从 UCI 下载 xlsx（公网部署环境无该文件时使用）。"""
+    gz = os.path.join(DATA, '_online_retail.csv.gz')
+    xls = os.path.join(DATA, '_online_retail.xlsx')
+    if os.path.exists(gz) or os.path.exists(xls):
         return
     os.makedirs(DATA, exist_ok=True)
     print('[数据] 本地缺少外部数据集，正在从 UCI 下载（约 23MB）...', flush=True)
     try:
-        urllib.request.urlretrieve(_UCI_XLSX_URL, target)
+        urllib.request.urlretrieve(_UCI_XLSX_URL, xls)
     except Exception as e:
         raise RuntimeError('外部数据集自动下载失败（%s）。请将 _online_retail.xlsx 手动放入 data/ 目录。' % e)
     print('[数据] 外部数据集下载完成。', flush=True)
 
 
+def _load_online_retail():
+    """加载外部数据集：优先用压缩 CSV（秒级读取），否则回退到 xlsx，并缓存结果。
+
+    原实现直接用 `pd.read_excel` 读 23MB 的 xlsx，首次访问「外部数据源」页需约 30~40 秒，
+    是页面跳转缓慢的最主要瓶颈。改用 `_online_retail.csv.gz`（约 7.6MB，读取 0.5s 内）后，
+    首次打开该页即可秒开。
+    """
+    if '_or' not in _cache:
+        gz = os.path.join(DATA, '_online_retail.csv.gz')
+        xls = os.path.join(DATA, '_online_retail.xlsx')
+        if os.path.exists(gz):
+            _cache['_or'] = pd.read_csv(gz, compression='gzip')
+        else:
+            print('[数据] 暂无压缩缓存，正在读取 xlsx（首次较慢，约需数十秒）...', flush=True)
+            _cache['_or'] = pd.read_excel(xls)
+    return _cache['_or']
+
+
+_ext_cache = None  # 外部数据集分析结果缓存（静态数据，计算结果可复用）
+
+
 def external_data():
     """加载外部公开电商数据集 UCI Online Retail，产出全球市场洞察。"""
+    global _ext_cache
+    if _ext_cache is not None:
+        return _ext_cache
     _ensure_online_retail()
-    if '_or' not in _cache:
-        _cache['_or'] = pd.read_excel(os.path.join(DATA, '_online_retail.xlsx'))
-    df = _cache['_or'].copy()
+    df = _load_online_retail().copy()
     df['InvoiceDate'] = pd.to_datetime(df['InvoiceDate'])
     df['month'] = df['InvoiceDate'].dt.to_period('M').astype(str)
     df['weekday'] = df['InvoiceDate'].dt.strftime('%A')
@@ -644,7 +688,7 @@ def external_data():
     order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
     weekday = [{'name': w, 'value': _num(wk.get(w, 0))} for w in order]
 
-    return {
+    _ext_cache = {
         'source': _EXTERNAL_SRC,
         'desc': '本模块数据来源于 UCI 机器学习库公开数据集「Online Retail」(2010-12 至 2011-12，英国零售电商，'
                 '541,909 条交易记录)，在赛题指定的阿里天池 Rec-Tmall 等基础数据之外，作为自增公开数据源，'
@@ -659,4 +703,5 @@ def external_data():
         'weekday': weekday,
         'customers': [{'id': int(k), 'value': _num(v)} for k, v in cust.items()],
     }
+    return _ext_cache
 
