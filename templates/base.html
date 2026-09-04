@@ -44,7 +44,7 @@
       <span class="lv-item">延迟单 <b id="lv-delay">--</b></span>
       <span class="lv-grow" id="lv-grow">--</span>
       <div class="lv-spark" id="lv-spark" title="最近几批实时GMV走势"></div>
-      <button class="lv-refresh" id="lv-refresh" type="button">图表自动刷新：开</button>
+      <button class="lv-refresh" id="lv-refresh" type="button">实时刷新：开</button>
     </div>
     {% block content %}{% endblock %}
     <footer>电子商务大数据分析与智能决策支持系统 —— 中国大学生计算机设计大赛·大数据主题赛 &nbsp;|&nbsp; 数据源：阿里天池 Rec-Tmall 等 <span class="src">【自增公开数据集】</span></footer>
@@ -79,6 +79,7 @@ function __applyDark(o){
   o = o || {};
   o.color = o.color || PALETTE;
   o.backgroundColor = 'transparent';
+  o.animationDuration = o.animationDuration || 450; // 图表绘制更快，减少页面等待感
   if(o.textStyle===undefined) o.textStyle={color:'#cbd5e1',fontSize:12};
   var tt = o.tooltip;
   if(!tt) o.tooltip={};
@@ -178,17 +179,15 @@ window.addEventListener('resize',function(){ for(var k in (window._charts||{})){
 })();
 </script>
 <script>
-// 实时数据状态栏：每 2 秒轮询 /api/live，刷新 LIVE 数字 + 实时趋势迷你图；
-// 并提供“整页自动刷新”（让所有图表随模型重算更新）开关，默认开，含滚动位置保留。
+// 实时数据状态栏：每 2 秒轮询 /api/live，仅就地更新 LIVE 数字 + 实时趋势迷你图；
+// 不再做“整页自动刷新”，页面不会闪跳；开关可暂停/恢复实时刷新。
 (function(){
   var $=function(id){return document.getElementById(id);};
   var o=$('lv-orders'),g=$('lv-gmv'),mn=$('lv-min'),av=$('lv-avg'),
       dl=$('lv-delay'),gr=$('lv-grow'),bt=$('lv-refresh'),spEl=$('lv-spark');
-  var AUTO_SEC=20, autoOn=true, sec=AUTO_SEC, spark=null;
+  var spark=null, liveTimer=null, liveOn=true;
   function fmt(n){return (n==null?'--':Number(n).toLocaleString('zh-CN',{maximumFractionDigits:0}));}
   function money(n){return (n==null?'--':'¥'+Number(n).toLocaleString('zh-CN',{maximumFractionDigits:0}));}
-  // 先恢复上一页滚动位置，避免整页刷新后跳回顶部
-  (function(){var sy=parseInt(sessionStorage.getItem('__dss_scroll')||'0',10);if(sy>0){window.scrollTo(0,sy);sessionStorage.removeItem('__dss_scroll');}})();
   function initSpark(){
     if(!spEl||typeof echarts==='undefined')return;
     spark=echarts.init(spEl);
@@ -222,26 +221,23 @@ window.addEventListener('resize',function(){ for(var k in (window._charts||{})){
       drawSpark(d.hist);
     }).catch(function(){});
   }
-  function countdown(){
-    if(!autoOn)return;
-    sec--;
-    if(sec<=0){
-      sec=AUTO_SEC;
-      var y=window.scrollY||document.documentElement.scrollTop||0;
-      try{sessionStorage.setItem('__dss_scroll',y);}catch(e){}
-      location.reload();
-      return;
-    }
-    if(bt)bt.textContent='图表自动刷新：开（'+sec+'s）';
+  function startLive(){
+    if(liveTimer)clearInterval(liveTimer);
+    load();
+    liveTimer=setInterval(load,2000);
+  }
+  function stopLive(){
+    if(liveTimer){clearInterval(liveTimer);liveTimer=null;}
   }
   if(bt){
-    bt.textContent=autoOn?('图表自动刷新：开（'+sec+'s）'):'图表自动刷新：关';
+    bt.textContent=liveOn?'实时刷新：开':'实时刷新：关';
     bt.onclick=function(){
-      autoOn=!autoOn; sec=AUTO_SEC;
-      bt.textContent=autoOn?('图表自动刷新：开（'+sec+'s）'):'图表自动刷新：关';
+      liveOn=!liveOn;
+      if(liveOn){startLive();bt.textContent='实时刷新：开';}
+      else{stopLive();bt.textContent='实时刷新：关';}
     };
   }
-  initSpark();load();setInterval(load,2000);setInterval(countdown,1000);
+  initSpark();startLive();
 })();
 </script>
 {% block scripts %}{% endblock %}
