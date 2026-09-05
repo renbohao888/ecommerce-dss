@@ -159,25 +159,11 @@ select:focus,input:focus{border-color:var(--accent2);box-shadow:0 0 0 3px rgba(3
 .rec .reason{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
 footer{color:var(--muted);font-size:12px;margin-top:28px;text-align:center;border-top:1px solid var(--border);padding-top:18px}
 footer .src{color:var(--accent2)}
-.anim{opacity:0;animation:bounceIn .7s cubic-bezier(.2,.9,.3,1.2) forwards}
-.anim.fade{animation:fadeUp .7s ease forwards}
-@keyframes fadeUp{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:none}}
-@keyframes bounceIn{
-  0%{opacity:0;transform:scale(.7) translateY(46px)}
-  55%{opacity:1;transform:scale(1.05) translateY(-10px)}
-  75%{transform:scale(.97) translateY(4px)}
-  100%{opacity:1;transform:scale(1) translateY(0)}
-}
-@keyframes slideLeft{from{opacity:0;transform:translateX(-30px)}to{opacity:1;transform:none}}
-.sidebar .nav li{animation:slideLeft .6s ease backwards}
-.sidebar .nav li:nth-child(1){animation-delay:.05s}
-.sidebar .nav li:nth-child(2){animation-delay:.1s}
-.sidebar .nav li:nth-child(3){animation-delay:.15s}
-.sidebar .nav li:nth-child(4){animation-delay:.2s}
-.sidebar .nav li:nth-child(5){animation-delay:.25s}
-.sidebar .nav li:nth-child(6){animation-delay:.3s}
-.sidebar .nav li:nth-child(7){animation-delay:.35s}
-.sidebar .nav li:nth-child(8){animation-delay:.4s}
+/* 入场动画：仅轻淡淡入（不位移、不缩放），并把错开延迟置 0，避免导航时的“跳动/转一下” */
+.anim{opacity:0;animation:fadeIn .45s ease forwards;animation-delay:0s!important}
+.anim.fade{animation:fadeIn .45s ease forwards;animation-delay:0s!important}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.sidebar .nav li{animation:fadeIn .3s ease forwards;animation-delay:0s!important}
 #progress{position:fixed;top:0;left:0;height:3px;width:0;z-index:9999;background:var(--grad2);box-shadow:0 0 12px var(--accent2)}
 ::-webkit-scrollbar{width:9px;height:9px}
 ::-webkit-scrollbar-track{background:var(--bg)}
@@ -194,6 +180,7 @@ footer .src{color:var(--accent2)}
   display:flex;align-items:center;justify-content:center;border-radius:50%;cursor:grab;user-select:none;touch-action:none;
   background:linear-gradient(135deg,#3b82f6,#22d3ee 55%,#8b5cf6);border:2px solid rgba(255,255,255,.35);
   box-shadow:0 10px 30px rgba(0,0,0,.55);animation:aiPulse 2.6s infinite;transition:transform .18s ease,box-shadow .18s ease;}
+.ai-fab-txt{font-weight:800;font-size:23px;letter-spacing:2px;line-height:1;text-shadow:0 2px 6px rgba(0,0,0,.35);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;}
 .ai-fab:hover{transform:scale(1.06);}
 .ai-fab:active{cursor:grabbing;transform:scale(.94);}
 @keyframes aiPulse{0%{box-shadow:0 0 0 0 rgba(59,130,246,.55),0 10px 30px rgba(0,0,0,.55);}
