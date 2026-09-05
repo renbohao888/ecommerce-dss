@@ -29,6 +29,7 @@
   在赛题指定的阿里天池 Rec-Tmall 等基础数据之外，用于补充全球市场与生命周期洞察。
   > 该文件约 23MB，为避免 Git 推送超时**不属于仓库**；缺少时系统会在**首次访问「外部数据源」页**时
   > 自动从 UCI 下载（见 `ml/models.py` 的 `_ensure_online_retail()`）。公网部署环境首次打开 `/data` 会稍慢，之后已缓存。
+   > **提交的 `电商智能决策支持系统.zip` 已按赛题“附加数据集”要求，将本数据集及其来源说明（`data/_online_retail_来源说明.txt`）一并打入 `data` 目录。**
 
 ## 实时数据流（LIVE）
 
@@ -69,6 +70,7 @@ python app.py
 - 仓库已内置 `.gitignore`、`Procfile`（`web: python app.py`）与 `render.yaml`（Render 一键部署）。
 - `app.py` 末尾已改为 `host='0.0.0.0'` 并读取平台 `PORT` 环境变量，可被云平台直接托管；实时数据流与定时重算线程会随服务一同运行。
 - 「外部数据源」页依赖的 23MB 数据集不在仓库中，首次访问该页时系统会**自动从 UCI 下载**（见「数据说明」）。
+- **演示部署地址（已上线）**：<https://ecommerce-dss.onrender.com> —— 本项目已实际部署于 Render 免费版；实例闲置后会自动休眠，首次访问约需 30~60 秒冷启动，随后即可正常访问。
 - **Render（免费，推荐）**：push 到 GitHub 后，登录 [render.com](https://render.com) → New → **Blueprint** → 选择该仓库，即按 `render.yaml` 自动创建并部署。
 - **Railway / PythonAnywhere** 亦可：它们需要监听平台注入的 `PORT` 与 `0.0.0.0`，本项目已兼容。
 - **快速临时公网地址（无需注册）**：在本机运行 `python app.py` 后，执行

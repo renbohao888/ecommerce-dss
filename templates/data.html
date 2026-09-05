@@ -1,7 +1,7 @@
 ﻿{% extends 'base.html' %}
 {% block title %}外部数据源 - 电商智能决策支持系统{% endblock %}
 {% block heading %}外部数据源 · 全球市场洞察{% endblock %}
-{% block sub %}自增公开数据集 UCI Online Retail（2010-12 ~ 2011-12）{% endblock %}
+{% block sub %}自增公开数据集 UCI 在线零售（2010-12 ~ 2011-12）{% endblock %}
 
 {% block content %}
 <div class="panel anim" style="animation-delay:.03s">
@@ -14,7 +14,7 @@
   <div class="card metric anim" style="animation-delay:.08s"><div class="label">交易笔数</div><div class="value">{{ data.kpis.transactions }}</div><div class="hint">去重发票</div></div>
   <div class="card metric anim" style="animation-delay:.12s"><div class="label">总营收(£)</div><div class="value green">{{ data.kpis.revenue }}</div><div class="hint">客单价 £{{ data.kpis.avg_order }}</div></div>
   <div class="card metric anim" style="animation-delay:.16s"><div class="label">客户数</div><div class="value">{{ data.kpis.customers }}</div><div class="hint">去重客户</div></div>
-  <div class="card metric anim" style="animation-delay:.2s"><div class="label">商品数</div><div class="value">{{ data.kpis.products }}</div><div class="hint">SKU 总数</div></div>
+  <div class="card metric anim" style="animation-delay:.2s"><div class="label">商品数</div><div class="value">{{ data.kpis.products }}</div><div class="hint">商品种类总数</div></div>
   <div class="card metric anim" style="animation-delay:.24s"><div class="label">国家数</div><div class="value orange">{{ data.kpis.countries }}</div><div class="hint">覆盖市场</div></div>
   <div class="card metric anim" style="animation-delay:.28s"><div class="label">退货率</div><div class="value red">{{ data.ret_rate }}%</div><div class="hint">负数量占比</div></div>
 </div>
@@ -24,13 +24,13 @@
 </div>
 
 <div class="grid two">
-  <div class="panel anim" style="animation-delay:.35s"><h3>各国家营收（Top 10）</h3><div id="country" class="chart"></div></div>
+  <div class="panel anim" style="animation-delay:.35s"><h3>各国家营收（前10）</h3><div id="country" class="chart"></div></div>
   <div class="panel anim" style="animation-delay:.45s"><h3>一周营收分布</h3><div id="wk" class="chart small"></div></div>
 </div>
 
 <div class="grid two">
-  <div class="panel anim" style="animation-delay:.5s"><h3>热销商品 Top 10（按营收）</h3><div id="prod" class="chart"></div></div>
-  <div class="panel anim" style="animation-delay:.6s"><h3>高价值客户 Top 10（按消费）</h3><div id="cust" class="chart"></div></div>
+  <div class="panel anim" style="animation-delay:.5s"><h3>热销商品 前10（按营收）</h3><div id="prod" class="chart"></div></div>
+  <div class="panel anim" style="animation-delay:.6s"><h3>高价值客户 前10（按消费）</h3><div id="cust" class="chart"></div></div>
 </div>
 {% endblock %}
 

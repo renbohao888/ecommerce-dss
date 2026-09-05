@@ -14,7 +14,7 @@
     <div class="brand">
       <div class="logo">🛍</div>
       <h1>电商智能决策<br>支持系统</h1>
-      <small>E-commerce DSS</small>
+      <small>电子商务决策支持系统</small>
     </div>
     <ul class="nav">
       <li><a href="/" class="{{ 'active' if page=='dashboard' else '' }}"><span class="ico">📊</span>数据总览</a></li>
@@ -36,15 +36,15 @@
       <div class="clock" id="clock">--</div>
     </div>
     <div class="livebar" id="livebar">
-      <span class="lv-dot"></span><span class="lv-label">LIVE</span>
+      <span class="lv-dot"></span><span class="lv-label">实时</span>
       <span class="lv-item">实时订单 <b id="lv-orders">--</b></span>
-      <span class="lv-item">实时GMV <b id="lv-gmv">--</b></span>
+      <span class="lv-item">实时成交额 <b id="lv-gmv">--</b></span>
       <span class="lv-item">近1分钟 <b id="lv-min">--</b> 单</span>
       <span class="lv-item">平均客单 <b id="lv-avg">--</b></span>
       <span class="lv-item">延迟单 <b id="lv-delay">--</b></span>
       <span class="lv-grow" id="lv-grow">--</span>
-      <div class="lv-spark" id="lv-spark" title="最近几批实时GMV走势"></div>
-      <button class="lv-refresh" id="lv-refresh" type="button">图表自动刷新：开</button>
+      <div class="lv-spark" id="lv-spark" title="最近几批实时成交额走势"></div>
+      <button class="lv-refresh" id="lv-refresh" type="button">图表自动刷新：关</button>
     </div>
     {% block content %}{% endblock %}
     <footer>电子商务大数据分析与智能决策支持系统 —— 中国大学生计算机设计大赛·大数据主题赛 &nbsp;|&nbsp; 数据源：阿里天池 Rec-Tmall 等 <span class="src">【自增公开数据集】</span></footer>
@@ -178,13 +178,13 @@ window.addEventListener('resize',function(){ for(var k in (window._charts||{})){
 })();
 </script>
 <script>
-// 实时数据状态栏：每 2 秒轮询 /api/live，刷新 LIVE 数字 + 实时趋势迷你图；
-// 并提供“整页自动刷新”（让所有图表随模型重算更新）开关，默认开，含滚动位置保留。
+// 实时数据状态栏：每 2 秒轮询 /api/live，刷新实时数字 + 实时趋势迷你图；
+// 并提供“整页自动刷新”（让所有图表随模型重算更新）开关，默认关，含滚动位置保留。
 (function(){
   var $=function(id){return document.getElementById(id);};
   var o=$('lv-orders'),g=$('lv-gmv'),mn=$('lv-min'),av=$('lv-avg'),
       dl=$('lv-delay'),gr=$('lv-grow'),bt=$('lv-refresh'),spEl=$('lv-spark');
-  var AUTO_SEC=20, autoOn=true, sec=AUTO_SEC, spark=null;
+  var AUTO_SEC=20, autoOn=false, sec=AUTO_SEC, spark=null;
   function fmt(n){return (n==null?'--':Number(n).toLocaleString('zh-CN',{maximumFractionDigits:0}));}
   function money(n){return (n==null?'--':'¥'+Number(n).toLocaleString('zh-CN',{maximumFractionDigits:0}));}
   // 先恢复上一页滚动位置，避免整页刷新后跳回顶部

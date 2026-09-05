@@ -9,14 +9,14 @@
   {% for d in [7,14,30] %}
     <button class="btn" type="submit" name="days" value="{{ d }}" style="{{ 'background:var(--grad);' if d==days else 'background:rgba(255,255,255,.06);box-shadow:none;' }}">{{ d }} 天</button>
   {% endfor %}
-  <span class="muted">模型 MAE = ¥{{ data.mae }} · RMSE = ¥{{ data.rmse }} · 历史截至 {{ data.last_date }}</span>
+  <span class="muted">模型平均绝对误差 = ¥{{ data.mae }} · 均方根误差 = ¥{{ data.rmse }} · 历史截至 {{ data.last_date }}</span>
 </form>
 
 <div class="cards">
   <div class="card metric anim" style="animation-delay:.05s"><div class="label">预测区间</div><div class="value">{{ data.dates[0] }} ~ {{ data.dates[-1] }}</div><div class="hint">共 {{ days }} 天</div></div>
-  <div class="card metric anim" style="animation-delay:.1s"><div class="label">首日预测 GMV</div><div class="value green">¥{{ data.forecast[0] }}</div><div class="hint">较近期均值</div></div>
-  <div class="card metric anim" style="animation-delay:.15s"><div class="label">预测期合计 GMV</div><div class="value">¥{{ data.forecast | sum }}</div><div class="hint">趋势判断</div></div>
-  <div class="card metric anim" style="animation-delay:.2s"><div class="label">模型 MAE</div><div class="value orange">¥{{ data.mae }}</div><div class="hint">平均绝对误差</div></div>
+  <div class="card metric anim" style="animation-delay:.1s"><div class="label">首日预测成交额</div><div class="value green">¥{{ data.forecast[0] }}</div><div class="hint">较近期均值</div></div>
+  <div class="card metric anim" style="animation-delay:.15s"><div class="label">预测期合计成交额</div><div class="value">¥{{ data.forecast | sum }}</div><div class="hint">趋势判断</div></div>
+  <div class="card metric anim" style="animation-delay:.2s"><div class="label">模型平均绝对误差</div><div class="value orange">¥{{ data.mae }}</div><div class="hint">误差越小越准</div></div>
 </div>
 
 <div class="panel anim" style="animation-delay:.2s">
@@ -58,7 +58,7 @@ renderChart('fc', {
   grid:{left:64,right:30,top:42,bottom:60},
   xAxis:{type:'category', data:allDates, axisLabel:{show:false}},
   dataZoom:[{type:'inside', start:65, end:100},{type:'slider', start:65, end:100, height:16, bottom:10}],
-  yAxis:{type:'value', name:'GMV(元)'},
+  yAxis:{type:'value', name:'成交额(元)'},
   series:[
     {name:'历史销售额', type:'line', smooth:true, showSymbol:false, data:histVals,
      lineStyle:{width:2, color:'#3b82f6'}, itemStyle:{color:'#3b82f6'},

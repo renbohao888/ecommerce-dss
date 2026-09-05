@@ -18,7 +18,7 @@ from ml import live as LIVE  # noqa: E402
 # 实时化配置
 LIVE_TICK = 3.0          # 每个实时数据批间隔（秒）
 LIVE_BATCH = (2, 5)      # 每批新订单数区间
-REFRESH_SEC = 15          # 模型定时重算间隔（秒）
+REFRESH_SEC = 120         # 模型低频重算间隔（秒）：重模型常驻，切换模块不做重训练
 
 app = Flask(__name__)
 app.config['JSON_AS_ASCII'] = False
@@ -131,22 +131,40 @@ def api_chat():
 
 
 def _start_live():
-    """启动实时数据流 + 定时重算调度（后台守护线程）。"""
+    """启动实时数据流 + 关键模型预热 + 定时重算调度（后台守护线程）。"""
+    # 1) 先同步预热全部模型：避免用户首次切换模块时临时训练而卡顿
+    try:
+        t0 = time.time()
+        M.build_all()
+        print('[预热] 全部模型训练完成（耗时 %.1fs）。' % (time.time() - t0), flush=True)
+    except Exception as e:
+        print('[预热] 模型预热失败：%s' % e)
+
+    # 2) 后台预热外部数据源（读 23MB Excel，约 20s，不阻塞启动；前台访问时直接命中缓存）
+    def _warm_ext():
+        try:
+            M.external_data()
+            print('[预热] 外部数据源已就绪。', flush=True)
+        except Exception as e:
+            print('[预热] 外部数据源预热失败：%s' % e)
+    threading.Thread(target=_warm_ext, daemon=True).start()
+
+    # 3) 启动实时数据流
     try:
         LIVE.start(M.products(), M.users(), tick=LIVE_TICK, batch=LIVE_BATCH)
         print('[实时] 实时数据流已启动：每 %.1fs 生成一批新数据。' % LIVE_TICK, flush=True)
     except Exception as e:
         print('[实时] 实时数据流启动失败：%s' % e)
 
+    # 4) 低频后台重算所有模型（重模型常驻，仅定时小幅更新，不阻塞页面访问）
     def _scheduler():
         time.sleep(REFRESH_SEC)
         while True:
             try:
-                M.refresh()
-                # 打印当次实时快照，便于观察数据在动
+                M.build_all()
                 s = LIVE.snapshot()
                 if s['orders_total']:
-                    print('[实时] 模型已重算 | 实时订单 %d | GMV %.0f | 近1分钟 %d 单'
+                    print('[实时] 模型已重算 | 实时订单 %d | 成交额 %.0f | 近1分钟 %d 单'
                           % (s['orders_total'], s['gmv_total'], s['orders_last_min']), flush=True)
             except Exception:
                 pass

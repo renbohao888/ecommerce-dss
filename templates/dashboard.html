@@ -8,14 +8,14 @@
   <div class="card metric anim" style="animation-delay:.05s"><div class="label">用户总数</div><div class="value">{{ data.kpis.users }}</div><div class="hint">注册用户规模</div></div>
   <div class="card metric anim" style="animation-delay:.1s"><div class="label">在售商品</div><div class="value">{{ data.kpis.products }}</div><div class="hint">商品库总量</div></div>
   <div class="card metric anim" style="animation-delay:.15s"><div class="label">订单总量</div><div class="value">{{ data.kpis.orders }}</div><div class="hint">累计订单</div></div>
-  <div class="card metric anim" style="animation-delay:.2s"><div class="label">总交易额 GMV</div><div class="value green">¥{{ data.kpis.gmv }}</div><div class="hint">客单价 ¥{{ data.kpis.avg_order }}</div></div>
+  <div class="card metric anim" style="animation-delay:.2s"><div class="label">总交易额</div><div class="value green">¥{{ data.kpis.gmv }}</div><div class="hint">客单价 ¥{{ data.kpis.avg_order }}</div></div>
   <div class="card metric anim" style="animation-delay:.25s"><div class="label">平均评分</div><div class="value">{{ data.kpis.avg_sat }}</div><div class="hint">评价样本 {{ data.kpis.reviews }}</div></div>
   <div class="card metric anim" style="animation-delay:.3s"><div class="label">投诉总量</div><div class="value orange">{{ data.kpis.complaints }}</div><div class="hint">服务质量监测</div></div>
   <div class="card metric anim" style="animation-delay:.35s"><div class="label">物流延迟率</div><div class="value red">{{ data.kpis.delay_rate }}%</div><div class="hint">平均配送 {{ data.kpis.avg_delivery }} 天</div></div>
 </div>
 
 <div class="grid">
-  <div class="panel anim" style="animation-delay:.2s"><h3>近 30 天每日销售额（GMV）</h3><div id="daily" class="chart"></div></div>
+  <div class="panel anim" style="animation-delay:.2s"><h3>近 30 天每日销售额（成交额）</h3><div id="daily" class="chart"></div></div>
 </div>
 
 <div class="grid two">
@@ -24,7 +24,7 @@
 </div>
 
 <div class="grid two">
-  <div class="panel anim" style="animation-delay:.5s"><h3>热销商品 TOP8</h3><div id="top" class="chart"></div></div>
+  <div class="panel anim" style="animation-delay:.5s"><h3>热销商品 前8</h3><div id="top" class="chart"></div></div>
   <div class="panel anim" style="animation-delay:.6s"><h3>用户评分分布 &amp; 物流状态</h3><div id="mixed" class="chart"></div></div>
 </div>
 {% endblock %}
@@ -36,7 +36,7 @@ renderChart('daily', {
   tooltip:{trigger:'axis'},
   grid:{left:60,right:24,top:40,bottom:44},
   xAxis:{type:'category', data:D.daily.date, axisLabel:{rotate:30, fontSize:10}},
-  yAxis:{type:'value', name:'GMV(元)'},
+  yAxis:{type:'value', name:'成交额(元)'},
   series:[{name:'销售额', type:'line', smooth:true, symbol:'circle', symbolSize:7,
     lineStyle:{width:3, color:'#3b82f6', shadowColor:'#3b82f6', shadowBlur:14},
     areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[
@@ -64,7 +64,7 @@ renderChart('channel', {
 renderChart('top', {
   tooltip:{trigger:'axis', axisPointer:{type:'shadow'}, formatter: ps=>ps[0].name+'<br>'+money(ps[0].value)},
   grid:{left:180,right:44,top:16,bottom:34},
-  xAxis:{type:'value', name:'GMV(元)'},
+  xAxis:{type:'value', name:'成交额(元)'},
   yAxis:{type:'category', data:D.top_prods.map(x=>x.name).reverse(), axisLabel:{fontSize:11}},
   series:[{type:'bar', data:D.top_prods.map(x=>x.value).reverse(), barWidth:15,
     itemStyle:{borderRadius:[0,10,10,0], color:new echarts.graphic.LinearGradient(0,0,1,0,[
@@ -85,12 +85,12 @@ renderChart('mixed', {
      itemStyle:{color:'#f43f5e'}, symbol:'circle', symbolSize:8, smooth:true}
   ]
 });
-// 实时化：每 5 秒自动刷新近30天GMV走势图（数据随实时流自动更新）
+// 实时化：每 5 秒自动刷新近30天成交额走势图（数据随实时流自动更新）
 (function(){
   function opt(d){
     return {tooltip:{trigger:'axis'}, grid:{left:60,right:24,top:40,bottom:44},
       xAxis:{type:'category', data:d.date, axisLabel:{rotate:30, fontSize:10}},
-      yAxis:{type:'value', name:'GMV(元)'},
+      yAxis:{type:'value', name:'成交额(元)'},
       series:[{name:'销售额', type:'line', smooth:true, symbol:'circle', symbolSize:7,
         lineStyle:{width:3, color:'#3b82f6', shadowColor:'#3b82f6', shadowBlur:14},
         areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[

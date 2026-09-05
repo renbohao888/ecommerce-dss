@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """机器学习/数据分析模型层：负责加载数据、训练模型、产出页面所需的图表数据。"""
 import os
+import time
+import threading
 import urllib.request
 import numpy as np
 import pandas as pd
@@ -10,6 +12,25 @@ from ml import live as LIVE
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA = os.path.join(BASE, 'data')
 _cache = {}
+
+# ---- 结果缓存：让“切换模块”/重复访问时直接命中，避免每次请求都重新做耗时计算 ----
+_rc = {}                 # key -> (timestamp, value)
+_rc_lock = threading.Lock()
+RC_TTL = 45.0            # 结果缓存有效期（秒）
+_or_lock = threading.Lock()   # 串行化“外部数据源”大 Excel 的下载/读取
+
+
+def _cached(key, ttl=RC_TTL, producer=None):
+    """带 TTL 的内存结果缓存：命中且未过期直接返回，否则由 producer 计算并写入。"""
+    now = time.time()
+    with _rc_lock:
+        hit = _rc.get(key)
+        if hit is not None and (now - hit[0]) < ttl:
+            return hit[1]
+    val = producer() if producer is not None else None
+    with _rc_lock:
+        _rc[key] = (now, val)
+    return val
 
 
 def load(name):
@@ -27,7 +48,7 @@ def products():
 
 
 def orders():
-    o = load('orders')
+    o = load('orders').copy()
     o['order_date'] = pd.to_datetime(o['order_date'])
     live = LIVE.orders()
     if live is not None and len(live):
@@ -36,7 +57,7 @@ def orders():
 
 
 def behaviors():
-    b = load('behaviors')
+    b = load('behaviors').copy()
     live = LIVE.behaviors()
     if live is not None and len(live):
         b = pd.concat([b, live], ignore_index=True)
@@ -44,7 +65,7 @@ def behaviors():
 
 
 def reviews():
-    r = load('reviews')
+    r = load('reviews').copy()
     live = LIVE.reviews()
     if live is not None and len(live):
         r = pd.concat([r, live], ignore_index=True)
@@ -52,13 +73,14 @@ def reviews():
 
 
 def refresh():
-    """清空各模块的模型缓存，使它们在下次调用时基于最新数据重新训练（定时重算用）。"""
-    global _user_item, _forecast, _marketing, _supply, _price
-    _user_item = None
-    _forecast = None
-    _marketing = None
-    _supply = None
-    _price = None
+    """仅清空“结果缓存”，让下次访问时基于最新实时数据重新计算图表数据。
+
+    注意：这里是性能修复的关键——不再清空各模块已训练好的模型（_user_item/_forecast/
+    _marketing/_supply/_price），否则每次切换模块都会触发昂贵的重新训练（随机森林/KMeans/
+    协同过滤），导致系统卡顿甚至长时间转圈。重模型只在启动预热与后台低频重算时训练。
+    """
+    with _rc_lock:
+        _rc.clear()
 
 
 def _num(x, nd=2):
@@ -74,7 +96,12 @@ def _num(x, nd=2):
 
 
 def dashboard_data():
-    """数据总览：KPI + 各维度图表数据。"""
+    """数据总览：KPI + 各维度图表数据（结果带缓存，避免切换卡顿）。"""
+    return _cached('dashboard', producer=_dashboard_data)
+
+
+def _dashboard_data():
+    """数据总览：KPI + 各维度图表数据（实际计算体）。"""
     u = users()
     p = products()
     o = orders()
@@ -261,6 +288,13 @@ def train_forecast():
 
 
 def forecast(days=14):
+    """商品销售预测（结果带缓存：切换模块/重复访问不再重复训练、不再卡顿）。"""
+    if days not in (7, 14, 30):
+        days = 14
+    return _cached('forecast:%d' % days, producer=lambda: _forecast_data(days))
+
+
+def _forecast_data(days=14):
     global _forecast
     if _forecast is None:
         train_forecast()
@@ -343,6 +377,11 @@ def train_marketing():
 
 
 def marketing_data():
+    """营销策略优化：RFM 客户分层与聚类（结果带缓存，避免切换卡顿）。"""
+    return _cached('marketing', producer=_marketing_data)
+
+
+def _marketing_data():
     global _marketing
     if _marketing is None:
         train_marketing()
@@ -395,6 +434,11 @@ def train_supplychain():
 
 
 def supplychain_data():
+    """供应链风控：延迟率与高风险订单（结果带缓存，避免切换卡顿）。"""
+    return _cached('supply', producer=_supplychain_data)
+
+
+def _supplychain_data():
     global _supply
     if _supply is None:
         train_supplychain()
@@ -454,6 +498,11 @@ def train_price():
 
 
 def price_data():
+    """商品价格优化：价格弹性与最优定价（结果带缓存，避免切换卡顿）。"""
+    return _cached('price', producer=_price_data)
+
+
+def _price_data():
     global _price
     if _price is None:
         train_price()
@@ -486,6 +535,11 @@ def price_curve(category):
 
 # ---------------- 用户行为概览 ----------------
 def behavior_overview():
+    """用户行为概览（结果带缓存，避免切换卡顿）。"""
+    return _cached('beh_overview', producer=_behavior_overview)
+
+
+def _behavior_overview():
     b = behaviors().copy()
     b['timestamp'] = pd.to_datetime(b['timestamp'])
     b['hour'] = b['timestamp'].dt.hour
@@ -607,17 +661,41 @@ def _ensure_online_retail():
     os.makedirs(DATA, exist_ok=True)
     print('[数据] 本地缺少外部数据集，正在从 UCI 下载（约 23MB）...', flush=True)
     try:
-        urllib.request.urlretrieve(_UCI_XLSX_URL, target)
+        # 设置下载超时，避免网络异常时前端无限挂起
+        with urllib.request.urlopen(_UCI_XLSX_URL, timeout=90) as resp:
+            blob = resp.read()
+        with open(target, 'wb') as f:
+            f.write(blob)
     except Exception as e:
         raise RuntimeError('外部数据集自动下载失败（%s）。请将 _online_retail.xlsx 手动放入 data/ 目录。' % e)
     print('[数据] 外部数据集下载完成。', flush=True)
 
 
 def external_data():
-    """加载外部公开电商数据集 UCI Online Retail，产出全球市场洞察。"""
-    _ensure_online_retail()
-    if '_or' not in _cache:
-        _cache['_or'] = pd.read_excel(os.path.join(DATA, '_online_retail.xlsx'))
+    """加载外部公开电商数据集 UCI Online Retail（结果带 120s 缓存，避免每次重读 23MB Excel）。"""
+    return _cached('external', ttl=120, producer=_external_data)
+
+
+def _external_data():
+    """加载外部公开电商数据集 UCI Online Retail，产出全球市场洞察（实际计算体）。"""
+    # 用锁串行化“下载/读取大 Excel”，避免后台预热线程与前台请求同时读同一文件造成翻倍耗时
+    with _or_lock:
+        _ensure_online_retail()
+        if '_or' not in _cache:
+            pkl = os.path.join(DATA, '_online_retail.pkl')
+            if os.path.exists(pkl):
+                try:
+                    _cache['_or'] = pd.read_pickle(pkl)
+                except Exception:
+                    _cache['_or'] = pd.read_excel(os.path.join(DATA, '_online_retail.xlsx'))
+            else:
+                # 首次读取较大的 Excel，并缓存为快速本地文件（下次启动直接读 pkl，约 1s）
+                _cache['_or'] = pd.read_excel(os.path.join(DATA, '_online_retail.xlsx'))
+                try:
+                    _cache['_or'].to_pickle(pkl)
+                    print('[数据] 外部数据源已缓存为本地快速文件。', flush=True)
+                except Exception:
+                    pass
     df = _cache['_or'].copy()
     df['InvoiceDate'] = pd.to_datetime(df['InvoiceDate'])
     df['month'] = df['InvoiceDate'].dt.to_period('M').astype(str)

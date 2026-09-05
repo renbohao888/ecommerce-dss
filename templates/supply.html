@@ -6,9 +6,9 @@
 {% block content %}
 <div class="cards">
   <div class="card metric anim" style="animation-delay:.05s"><div class="label">物流延迟率</div><div class="value red">{{ data.delay_rate }}%</div><div class="hint">全量订单</div></div>
-  <div class="card metric anim" style="animation-delay:.1s"><div class="label">高风险预警</div><div class="value orange">{{ data.top | length }}</div><div class="hint">Top 风险订单</div></div>
+  <div class="card metric anim" style="animation-delay:.1s"><div class="label">高风险预警</div><div class="value orange">{{ data.top | length }}</div><div class="hint">高风险订单</div></div>
   <div class="card metric anim" style="animation-delay:.15s"><div class="label">监控维度</div><div class="value">{{ data.by_dist | length + data.by_cat | length }}</div><div class="hint">距离 &amp; 品类</div></div>
-  <div class="card metric anim" style="animation-delay:.2s"><div class="label">模型类型</div><div class="value green">RF</div><div class="hint">随机森林分类</div></div>
+  <div class="card metric anim" style="animation-delay:.2s"><div class="label">模型类型</div><div class="value green">随机森林</div><div class="hint">分类模型</div></div>
 </div>
 
 <div class="grid two">
@@ -17,7 +17,7 @@
 </div>
 
 <div class="panel anim" style="animation-delay:.45s">
-  <h3>延迟预警订单 Top 20</h3>
+  <h3>延迟预警订单 前20</h3>
   <table>
     <thead><tr><th>订单号</th><th>用户</th><th>商品</th><th>品类</th><th>仓库距离</th><th>配送(天)</th><th>风险概率</th></tr></thead>
     <tbody>
